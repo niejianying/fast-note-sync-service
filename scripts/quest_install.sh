@@ -6,7 +6,7 @@ IFS=$'\n\t'
 # Fast-Note Sync Service 管理脚本 (Premium)
 # ===========================================
 
-REPO="haierkeys/fast-note-sync-service"
+REPO="niejianying/fast-note-sync-service"
 BIN_BASE="fast-note-sync-service"
 INSTALL_DIR="/opt/fast-note"
 BIN_PATH="$INSTALL_DIR/$BIN_BASE"
@@ -19,11 +19,11 @@ TMPDIR="${TMPDIR:-/tmp}"
 GITHUB_RAW="https://github.com/$REPO/releases/download"
 GITHUB_API="https://api.github.com/repos/$REPO"
 CNB_API_BASE="https://api.cnb.cool/$REPO/-/releases"
-CNB_TOKEN="58tjez3744HL9Z10cRaCHdeEPhK"
-GITHUB_SCRIPT_URL="https://raw.githubusercontent.com/haierkeys/fast-note-sync-service/master/scripts/quest_install.sh"
-CNB_SCRIPT_URL="https://cnb.cool/haierkeys/fast-note-sync-service/-/git/raw/master/scripts/quest_install.sh?cnb"
+CNB_TOKEN="eAcyscst6JDVJuB1137tp5yIxdB"
+GITHUB_SCRIPT_URL="https://cnb.cool/niejianying/fast-note-sync-service/-/git/raw/master/scripts/quest_install.sh"
+CNB_SCRIPT_URL="https://cnb.cool/niejianying/fast-note-sync-service/-/git/raw/master/scripts/quest_install.sh?cnb"
 CNB_MIRROR_CONF="$HOME/.fast-note-mirror"
-USE_CNB=false
+USE_CNB=true
 SUDO=""
 
 # --- Color system // 颜色系统 ---

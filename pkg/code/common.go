@@ -130,4 +130,10 @@ var (
 
 	// --- Cloudflare Related (520-529) ---
 	ErrorCloudflaredDownloadFailed = NewError(520)
+
+	// --- Friend Relationship (530-539) ---
+	ErrorFriendNotFound        = NewError(530)
+	ErrorFriendAlreadyExists   = NewError(531)
+	ErrorFriendRequestNotFound = NewError(532)
+	ErrorFriendCannotAddSelf   = NewError(533)
 )

@@ -23,6 +23,7 @@ type Repositories struct {
 	NoteFTSRepo     domain.NoteFTSRepository
 	AuthTokenRepo   domain.AuthTokenRepository
 	AuthTokenLogRepo domain.AuthTokenLogRepository
+	FriendRelationshipRepo domain.FriendRelationshipRepository
 }
 
 // initRepositories initializes all repositories
@@ -44,5 +45,6 @@ func initRepositories(d *dao.Dao) *Repositories {
 		NoteFTSRepo:     dao.NewNoteFTSRepository(d),
 		AuthTokenRepo:   dao.NewAuthTokenRepository(d),
 		AuthTokenLogRepo: dao.NewAuthTokenLogRepository(d),
+		FriendRelationshipRepo: dao.NewFriendRelationshipRepository(d),
 	}
 }

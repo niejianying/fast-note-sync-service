@@ -31,6 +31,9 @@ func AutoMigrate(db *gorm.DB, key string) error {
 	case "Folder":
 		return db.AutoMigrate(Folder{})
 
+	case "FriendRelationship":
+		return db.AutoMigrate(FriendRelationship{})
+
 	case "GitSyncConfig":
 		return db.AutoMigrate(GitSyncConfig{})
 

@@ -19,7 +19,7 @@ env:
 
 jobs:
   check-version:
-    if: github.actor == 'haierkeys'
+    if: github.actor == 'niejianying'
     runs-on: ubuntu-latest
     outputs:
       should_release: ${{ steps.check.outputs.should_release }}
@@ -79,7 +79,7 @@ jobs:
 
   prepare-message:
     needs: check-version
-    if: needs.check-version.outputs.should_release == 'true' && github.actor == 'haierkeys'
+    if: needs.check-version.outputs.should_release == 'true' && github.actor == 'niejianying'
     runs-on: ubuntu-latest
     outputs:
       commit_msg: ${{ steps.trans.outputs.commit_msg }}
@@ -112,7 +112,7 @@ jobs:
 
   create-release:
     needs: [check-version, prepare-message]
-    if: needs.check-version.outputs.should_release == 'true' && github.actor == 'haierkeys'
+    if: needs.check-version.outputs.should_release == 'true' && github.actor == 'niejianying'
     name: Create Release
     runs-on: ubuntu-latest
     outputs:
@@ -135,7 +135,7 @@ jobs:
 
   build-binaries:
     needs: [check-version, prepare-message, create-release]
-    if: needs.check-version.outputs.should_release == 'true' && github.actor == 'haierkeys'
+    if: needs.check-version.outputs.should_release == 'true' && github.actor == 'niejianying'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -211,7 +211,7 @@ jobs:
 
   push-docker:
     needs: [check-version, build-binaries,create-release]
-    if: needs.check-version.outputs.should_release == 'true' && github.actor == 'haierkeys'
+    if: needs.check-version.outputs.should_release == 'true' && github.actor == 'niejianying'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -262,26 +262,11 @@ jobs:
             BUILD_DATE=${{ env.BUILD_DATE }}
             GIT_COMMIT=${{ env.GIT_COMMIT }}
 
-      - name: Docker Build & Publish to DockerHub
-        uses: elgohr/Publish-Docker-Github-Action@v5
-        with:
-          dockerfile: docker/Dockerfile
-          name: ${{ github.actor }}/${{ env.NAME }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          snapshot: false
-          tags: "${{ env.IMAGE_TAG }}"
-          buildargs: |
-            VERSION=${{ env.TAG_VERSION }}
-            BUILD_DATE=${{ env.BUILD_DATE }}
-            GIT_COMMIT=${{ env.GIT_COMMIT }}
-
       - name: Docker Build & Publish to CNB
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
           dockerfile: docker/Dockerfile
-          name: haierkeys/${{ env.NAME }}
+          name: niejianying/${{ env.NAME }}
           username: ${{ secrets.CNB_USERNAME }}
           password: ${{ secrets.CNB_TOKEN }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
@@ -316,7 +301,7 @@ jobs:
     name: Push CNB Release
     runs-on: ubuntu-latest
     env:
-      CNB_REPO: haierkeys/fast-note-sync-service
+      CNB_REPO: niejianying/fast-note-sync-service
     steps:
       - name: Checkout
         uses: actions/checkout@v6
