@@ -26,6 +26,7 @@ type Services struct {
 	SyncLogService     service.SyncLogService
 	FriendRelationshipService service.FriendRelationshipService
 	VaultShareService  service.VaultShareService
+	VaultRoutingService service.VaultRoutingService
 }
 
 // initServices initializes all services
@@ -101,6 +102,15 @@ func initServices(cfg *AppConfig, infra *Infra, repos *Repositories, logger *zap
 		repos.FriendRelationshipRepo,
 		logger,
 		svcConfig,
+	)
+	s.VaultRoutingService = service.NewVaultRoutingService(
+		repos.VaultMemberRepo,
+		repos.SharedNoteRepo,
+		repos.SharedFolderRepo,
+		repos.SharedFileRepo,
+		s.NoteService,
+		s.FolderService,
+		s.FileService,
 	)
 
 	return s

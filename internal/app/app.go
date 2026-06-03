@@ -348,19 +348,47 @@ func (a *App) GetNoteService(clientType, clientName, clientVersion string) servi
 	return a.NoteService
 }
 
-// GetFolderService returns FolderService instance with client information
-// GetFolderService 返回带有客户端信息的 FolderService 示例
+func (a *App) GetNoteServiceWithVault(ctx context.Context, vaultName, clientType, clientName, clientVersion string) service.NoteService {
+	base := a.NoteService.WithClient(clientType, clientName, clientVersion)
+	if a.VaultRoutingService != nil {
+		shared, _ := a.VaultRoutingService.IsSharedVault(ctx, vaultName)
+		if shared {
+			return service.NewSharedNoteService(a.SharedNoteRepo, clientType, clientName, clientVersion)
+		}
+	}
+	return base
+}
+
 func (a *App) GetFolderService(clientType, clientName, clientVersion string) service.FolderService {
 	return a.FolderService.WithClient(clientType, clientName, clientVersion)
 }
 
-// GetFileService gets FileService, supports setting client info
-// GetFileService 获取 FileService，支持设置客户端信息
+func (a *App) GetFolderServiceWithVault(ctx context.Context, vaultName, clientType, clientName, clientVersion string) service.FolderService {
+	if a.VaultRoutingService != nil {
+		shared, _ := a.VaultRoutingService.IsSharedVault(ctx, vaultName)
+		if shared {
+			return service.NewSharedFolderService(a.SharedFolderRepo, clientType, clientName, clientVersion)
+		}
+	}
+	return a.FolderService.WithClient(clientType, clientName, clientVersion)
+}
+
 func (a *App) GetFileService(clientType, clientName, clientVersion string) service.FileService {
 	if clientType != "" || clientName != "" || clientVersion != "" {
 		return a.FileService.WithClient(clientType, clientName, clientVersion)
 	}
 	return a.FileService
+}
+
+func (a *App) GetFileServiceWithVault(ctx context.Context, vaultName, clientType, clientName, clientVersion string) service.FileService {
+	base := a.FileService.WithClient(clientType, clientName, clientVersion)
+	if a.VaultRoutingService != nil {
+		shared, _ := a.VaultRoutingService.IsSharedVault(ctx, vaultName)
+		if shared {
+			return service.NewSharedFileService(a.SharedFileRepo, clientType, clientName, clientVersion)
+		}
+	}
+	return base
 }
 
 // GetSettingService gets SettingService, supports setting client info
