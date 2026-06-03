@@ -727,6 +727,9 @@ type WebsocketServer struct {
 	EnvelopeDecoder     func(data []byte) (string, []byte, error)               // Protobuf envelope decoder // Protobuf 信封解包钩子
 	ProtobufDecoder     func(action string, data []byte, obj any) (bool, error) // Protobuf decoder hook // Protobuf 解码钩子
 	ProtobufEncoder     func(action string, res *Res) ([]byte, error)           // Protobuf encoder hook // Protobuf 编码钩子
+	// Online status hooks
+	onUserConnect    func(uid int64)
+	onUserDisconnect func(uid int64)
 }
 
 // WSClientInfo WebSocket client information for API responses
@@ -936,6 +939,33 @@ func (w *WebsocketServer) UseTokenVerify(handler func(ctx context.Context, uid i
 	w.tokenVerifyHandler = handler
 }
 
+func (w *WebsocketServer) UseUserConnect(handler func(uid int64)) {
+	w.onUserConnect = handler
+}
+
+func (w *WebsocketServer) UseUserDisconnect(handler func(uid int64)) {
+	w.onUserDisconnect = handler
+}
+
+func (w *WebsocketServer) hasUserClients(uid int64) bool {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	clients, ok := w.userClients[strconv.FormatInt(uid, 10)]
+	return ok && len(clients) > 0
+}
+
+func (w *WebsocketServer) triggerUserConnect(uid int64, hasExisting bool) {
+	if !hasExisting && w.onUserConnect != nil {
+		w.onUserConnect(uid)
+	}
+}
+
+func (w *WebsocketServer) triggerUserDisconnect(uid int64, hasRemaining bool) {
+	if !hasRemaining && w.onUserDisconnect != nil {
+		w.onUserDisconnect(uid)
+	}
+}
+
 func (w *WebsocketServer) UseBinary(prefix string, handler func(*WebsocketClient, []byte)) {
 	if len(prefix) != 2 {
 		panic("binary message prefix must be 2 characters")
@@ -1012,7 +1042,11 @@ func (w *WebsocketServer) Authorization(c *WebsocketClient, msg *WebSocketMessag
 
 		log(LogInfo, "WS Authorization", zap.String("uid", user.ID), zap.String("Nickname", user.Nickname), zap.Int64("TokenID", c.TokenID))
 		c.User = user
+
+		// Check if this is the first connection for this user before adding
+		hasExisting := w.hasUserClients(uid)
 		c.UserClients = w.AddUserClient(c)
+		w.triggerUserConnect(uid, hasExisting)
 
 		versionInfo := w.app.Version()
 
@@ -1348,8 +1382,10 @@ func (w *WebsocketServer) OnClose(conn *gws.Conn, err error) {
 		if err != nil && !isNormalDisconnectError(err) {
 			logLevel = LogError
 		}
+		uid, _ := strconv.ParseInt(c.User.ID, 10, 64)
 		log(logLevel, "WS User Leave", zap.String("uid", c.User.ID), zap.String("traceID", c.TraceID), zap.Error(err))
 		w.RemoveUserClient(c)
+		w.triggerUserDisconnect(uid, w.hasUserClients(uid))
 	} else {
 		logLevel := LogInfo
 		if err != nil && !isNormalDisconnectError(err) {

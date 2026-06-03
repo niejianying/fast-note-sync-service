@@ -227,6 +227,15 @@ const (
 	// ShareSyncRefresh notify clients to refresh share state
 	// ShareSyncRefresh 通知客户端刷新分享状态
 	ShareSyncRefresh WebSocketSendAction = "ShareSyncRefresh"
+
+	// ---------------- Member Online Status ----------------
+
+	// MemberOnline notify vault members that a member came online
+	// MemberOnline 通知仓库成员有成员上线
+	MemberOnline WebSocketSendAction = "MemberOnline"
+	// MemberOffline notify vault members that a member went offline
+	// MemberOffline 通知仓库成员有成员下线
+	MemberOffline WebSocketSendAction = "MemberOffline"
 )
 
 // WSQueuedMessage represents a message item to be sent

@@ -22,3 +22,12 @@ type SharedVaultDTO struct {
 	CreatedAt timex.Time `json:"createdAt"`
 	UpdatedAt timex.Time `json:"updatedAt"`
 }
+
+// MemberStatusMessage WebSocket message for member online/offline status
+// MemberStatusMessage 成员在线/离线状态的 WebSocket 消息
+type MemberStatusMessage struct {
+	UID      int64  `json:"uid"`
+	Nickname string `json:"nickname"`
+	Vault    string `json:"vault"`
+	Online   bool   `json:"online"`
+}

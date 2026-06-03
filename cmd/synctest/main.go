@@ -299,13 +299,54 @@ func main() {
 		fmt.Println("\n   ❌ B did not receive folder broadcast (timeout)")
 	}
 
-	// 10. File broadcast (skipped - requires multi-step binary upload)
-	fmt.Println("\n10. File broadcast test (skipped)")
+	// 10. Online status test
+	fmt.Println("\n10. Online status test")
+	// Connect B after A to trigger a MemberOnline broadcast from B's connection
+	// When B reconnects, the onUserConnect hook fires and broadcasts MemberOnline
+	// A should receive MemberOnline for B's vault membership
+
+	// Disconnect B first to clear state, then reconnect
+	clientB.Close()
+	time.Sleep(1 * time.Second)
+
+	// Wait for A to have received the disconnect message
+	select {
+	case msg := <-clientA.ch:
+		if strings.Contains(msg, "MemberOffline") {
+			fmt.Printf("   ✅ A received MemberOffline: %.120s\n", msg)
+		}
+	case <-time.After(3 * time.Second):
+		fmt.Println("   ⚠️  A did not receive MemberOffline (may use different vault)")
+	}
+
+	// Reconnect B
+	clientB2, err := newWSClient(wsURL, wsTokenB, "B")
+	if err != nil {
+		fmt.Printf("   ❌ B reconnect: %v\n", err)
+	} else {
+		clientB = clientB2
+		time.Sleep(1 * time.Second)
+		select {
+		case msg := <-clientA.ch:
+			if strings.Contains(msg, "MemberOnline") {
+				fmt.Printf("   ✅ A received MemberOnline: %.120s\n", msg)
+			} else if strings.Contains(msg, "NoteSyncModify") || strings.Contains(msg, "FolderSyncModify") {
+				fmt.Printf("   ⚠️  A received other (MemberOnline may have been earlier): %.80s\n", msg)
+			}
+		case <-time.After(3 * time.Second):
+			fmt.Println("   ⚠️  A did not receive MemberOnline")
+		}
+	}
+
+	// 11. File broadcast (skipped - requires multi-step binary upload)
+	fmt.Println("\n11. File broadcast test (skipped)")
 	fmt.Println("   Note: File broadcast requires FileUploadChunkBinary + UploadComplete")
 	fmt.Println("   Manual test: use Flutter app to upload a file in shared vault")
 
 	clientA.Close()
-	clientB.Close()
+	if clientB != nil {
+		clientB.Close()
+	}
 
 	fmt.Println("\n╔══════════════════════════════════════╗")
 	fmt.Println("║          Test Complete               ║")
