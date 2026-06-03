@@ -1,11 +1,13 @@
 package api_router
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/haierkeys/fast-note-sync-service/internal/app"
 	"github.com/haierkeys/fast-note-sync-service/internal/dto"
+	"github.com/haierkeys/fast-note-sync-service/internal/middleware"
 	pkgapp "github.com/haierkeys/fast-note-sync-service/pkg/app"
 	"github.com/haierkeys/fast-note-sync-service/pkg/code"
 	apperrors "github.com/haierkeys/fast-note-sync-service/pkg/errors"
@@ -18,6 +20,14 @@ type VaultShareHandler struct {
 
 func NewVaultShareHandler(a *app.App) *VaultShareHandler {
 	return &VaultShareHandler{Handler: NewHandler(a)}
+}
+
+func (h *VaultShareHandler) logError(ctx context.Context, method string, err error) {
+	traceID := middleware.GetTraceID(ctx)
+	h.App.Logger().Error(method,
+		zap.Error(err),
+		zap.String("traceId", traceID),
+	)
 }
 
 func (h *VaultShareHandler) Share(c *gin.Context) {
