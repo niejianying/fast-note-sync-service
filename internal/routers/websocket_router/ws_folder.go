@@ -33,7 +33,7 @@ func (h *FolderWSHandler) FolderSync(c *pkgapp.WebsocketClient, msg *pkgapp.WebS
 	// Check and create vault
 	h.App.VaultService.GetOrCreate(ctx, uid, params.Vault)
 
-	folderSvc := h.App.GetFolderService(c.ClientType, c.ClientName, c.ClientVersion)
+	folderSvc := h.App.GetFolderServiceWithVault(ctx, params.Vault, c.ClientType, c.ClientName, c.ClientVersion)
 
 	var cFolders map[string]dto.FolderSyncCheckRequest = make(map[string]dto.FolderSyncCheckRequest)
 	var cFoldersKeys map[string]struct{} = make(map[string]struct{}, 0)
@@ -97,6 +97,13 @@ func (h *FolderWSHandler) FolderSync(c *pkgapp.WebsocketClient, msg *pkgapp.WebS
 						UpdatedTimestamp: folder.UpdatedTimestamp,
 					},
 				).WithVault(params.Vault).WithContext(params.Context), true, FolderSyncDelete)
+				h.broadcastToVaultMembers(ctx, params.Vault, c.User.UID, dto.FolderSyncDeleteMessage{
+					Path:             folder.Path,
+					PathHash:         folder.PathHash,
+					Ctime:            folder.Ctime,
+					Mtime:            folder.Mtime,
+					UpdatedTimestamp: folder.UpdatedTimestamp,
+				}, FolderSyncDelete)
 			} else {
 				h.App.Logger().Debug("websocket_router.folder.FolderSync.FolderService.Get check failed (not found or already deleted), broadcasting delete anyway",
 					zap.String(logpkg.FieldTraceID, c.TraceID),
@@ -113,6 +120,13 @@ func (h *FolderWSHandler) FolderSync(c *pkgapp.WebsocketClient, msg *pkgapp.WebS
 						UpdatedTimestamp: 0,
 					},
 				).WithVault(params.Vault).WithContext(params.Context), true, FolderSyncDelete)
+				h.broadcastToVaultMembers(ctx, params.Vault, c.User.UID, dto.FolderSyncDeleteMessage{
+					Path:             delFolder.Path,
+					PathHash:         delFolder.PathHash,
+					Ctime:            0,
+					Mtime:            0,
+					UpdatedTimestamp: 0,
+				}, FolderSyncDelete)
 			}
 
 		}
@@ -223,6 +237,13 @@ func (h *FolderWSHandler) FolderSync(c *pkgapp.WebsocketClient, msg *pkgapp.WebS
 					UpdatedTimestamp: newFolder.UpdatedTimestamp,
 				},
 			).WithVault(params.Vault).WithContext(params.Context), true, FolderSyncModify)
+			h.broadcastToVaultMembers(ctx, params.Vault, c.User.UID, dto.FolderSyncModifyMessage{
+				Path:             newFolder.Path,
+				PathHash:         newFolder.PathHash,
+				Ctime:            newFolder.Ctime,
+				Mtime:            newFolder.Mtime,
+				UpdatedTimestamp: newFolder.UpdatedTimestamp,
+			}, FolderSyncModify)
 		}
 	}
 
@@ -253,7 +274,8 @@ func (h *FolderWSHandler) FolderModify(c *pkgapp.WebsocketClient, msg *pkgapp.We
 	}
 
 	uid := c.User.UID
-	folder, err := h.App.GetFolderService(c.ClientType, c.ClientName, c.ClientVersion).UpdateOrCreate(c.Context(), uid, params)
+	ctx := c.Context()
+	folder, err := h.App.GetFolderServiceWithVault(ctx, params.Vault, c.ClientType, c.ClientName, c.ClientVersion).UpdateOrCreate(ctx, uid, params)
 	if err != nil {
 		h.respondError(c, code.ErrorFolderModifyOrCreateFailed, err, "websocket_router.folder.FolderModify.UpdateOrCreate")
 		return
@@ -273,6 +295,13 @@ func (h *FolderWSHandler) FolderModify(c *pkgapp.WebsocketClient, msg *pkgapp.We
 			UpdatedTimestamp: folder.UpdatedTimestamp,
 		},
 	).WithVault(params.Vault), true, FolderSyncModify)
+	h.broadcastToVaultMembers(ctx, params.Vault, uid, dto.FolderSyncModifyMessage{
+		Path:             folder.Path,
+		PathHash:         folder.PathHash,
+		Ctime:            folder.Ctime,
+		Mtime:            folder.Mtime,
+		UpdatedTimestamp: folder.UpdatedTimestamp,
+	}, FolderSyncModify)
 }
 
 // FolderDelete handles folder deletion
@@ -286,7 +315,8 @@ func (h *FolderWSHandler) FolderDelete(c *pkgapp.WebsocketClient, msg *pkgapp.We
 	}
 
 	uid := c.User.UID
-	folder, err := h.App.GetFolderService(c.ClientType, c.ClientName, c.ClientVersion).Delete(c.Context(), uid, params)
+	ctx := c.Context()
+	folder, err := h.App.GetFolderServiceWithVault(ctx, params.Vault, c.ClientType, c.ClientName, c.ClientVersion).Delete(ctx, uid, params)
 	if err != nil {
 		h.respondError(c, code.ErrorFolderDeleteFailed, err, "websocket_router.folder.FolderDelete.Delete")
 		return
@@ -306,6 +336,13 @@ func (h *FolderWSHandler) FolderDelete(c *pkgapp.WebsocketClient, msg *pkgapp.We
 			UpdatedTimestamp: folder.UpdatedTimestamp,
 		},
 	).WithVault(params.Vault), true, FolderSyncDelete)
+	h.broadcastToVaultMembers(ctx, params.Vault, uid, dto.FolderSyncDeleteMessage{
+		Path:             folder.Path,
+		PathHash:         folder.PathHash,
+		Ctime:            folder.Ctime,
+		Mtime:            folder.Mtime,
+		UpdatedTimestamp: folder.UpdatedTimestamp,
+	}, FolderSyncDelete)
 }
 
 // FolderRename handles folder renaming
@@ -319,8 +356,9 @@ func (h *FolderWSHandler) FolderRename(c *pkgapp.WebsocketClient, msg *pkgapp.We
 	}
 
 	uid := c.User.UID
-	folderSvc := h.App.GetFolderService(c.ClientType, c.ClientName, c.ClientVersion)
-	oldFolder, newFolder, err := folderSvc.Rename(c.Context(), uid, params)
+	ctx := c.Context()
+	folderSvc := h.App.GetFolderServiceWithVault(ctx, params.Vault, c.ClientType, c.ClientName, c.ClientVersion)
+	oldFolder, newFolder, err := folderSvc.Rename(ctx, uid, params)
 	if err != nil {
 		h.respondError(c, code.ErrorFolderRenameFailed, err, "websocket_router.folder.FolderRename.Rename")
 		return
@@ -343,6 +381,13 @@ func (h *FolderWSHandler) FolderRename(c *pkgapp.WebsocketClient, msg *pkgapp.We
 				UpdatedTimestamp: newFolder.UpdatedTimestamp,
 			},
 		).WithVault(params.Vault), true, FolderSyncModify)
+		h.broadcastToVaultMembers(ctx, params.Vault, uid, dto.FolderSyncModifyMessage{
+			Path:             newFolder.Path,
+			PathHash:         newFolder.PathHash,
+			Ctime:            newFolder.Ctime,
+			Mtime:            newFolder.Mtime,
+			UpdatedTimestamp: newFolder.UpdatedTimestamp,
+		}, FolderSyncModify)
 		return
 	}
 
@@ -355,5 +400,14 @@ func (h *FolderWSHandler) FolderRename(c *pkgapp.WebsocketClient, msg *pkgapp.We
 		OldPathHash:      oldFolder.PathHash,
 		UpdatedTimestamp: newFolder.UpdatedTimestamp,
 	}).WithVault(params.Vault), true, FolderSyncRename)
+	h.broadcastToVaultMembers(ctx, params.Vault, uid, dto.FolderSyncRenameMessage{
+		Path:             newFolder.Path,
+		PathHash:         newFolder.PathHash,
+		Ctime:            newFolder.Ctime,
+		Mtime:            newFolder.Mtime,
+		OldPath:          oldFolder.Path,
+		OldPathHash:      oldFolder.PathHash,
+		UpdatedTimestamp: newFolder.UpdatedTimestamp,
+	}, FolderSyncRename)
 
 }
