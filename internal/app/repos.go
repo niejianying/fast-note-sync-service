@@ -25,6 +25,10 @@ type Repositories struct {
 	AuthTokenLogRepo domain.AuthTokenLogRepository
 	FriendRelationshipRepo domain.FriendRelationshipRepository
 	SharedVaultRepo domain.SharedVaultRepository
+	VaultMemberRepo domain.VaultMemberRepository
+	SharedNoteRepo domain.SharedNoteRepository
+	SharedFolderRepo domain.SharedFolderRepository
+	SharedFileRepo domain.SharedFileRepository
 }
 
 // initRepositories initializes all repositories
@@ -48,5 +52,9 @@ func initRepositories(d *dao.Dao) *Repositories {
 		AuthTokenLogRepo: dao.NewAuthTokenLogRepository(d),
 		FriendRelationshipRepo: dao.NewFriendRelationshipRepository(d),
 		SharedVaultRepo:        dao.NewSharedVaultRepository(d),
+		VaultMemberRepo:        dao.NewVaultMemberRepository(d),
+		SharedNoteRepo:         dao.NewSharedNoteRepository(d),
+		SharedFolderRepo:       dao.NewSharedFolderRepository(d),
+		SharedFileRepo:         dao.NewSharedFileRepository(d),
 	}
 }

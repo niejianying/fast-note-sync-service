@@ -97,8 +97,8 @@ func initServices(cfg *AppConfig, infra *Infra, repos *Repositories, logger *zap
 	)
 	s.VaultShareService = service.NewVaultShareService(
 		repos.SharedVaultRepo,
+		repos.VaultMemberRepo,
 		repos.FriendRelationshipRepo,
-		s.TokenService,
 		logger,
 		svcConfig,
 	)

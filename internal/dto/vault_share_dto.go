@@ -18,7 +18,6 @@ type SharedVaultDTO struct {
 	OwnerUID  int64      `json:"ownerUid"`
 	TargetUID int64      `json:"targetUid"`
 	VaultKey  string     `json:"vaultKey,omitempty"`
-	Token     string     `json:"token,omitempty"`
 	Status    string     `json:"status"`
 	CreatedAt timex.Time `json:"createdAt"`
 	UpdatedAt timex.Time `json:"updatedAt"`

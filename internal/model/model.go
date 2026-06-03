@@ -52,14 +52,23 @@ func AutoMigrate(db *gorm.DB, key string) error {
 	case "Setting":
 		return db.AutoMigrate(Setting{})
 
+	case "SharedFile":
+		return db.AutoMigrate(SharedFile{})
+
+	case "SharedFolder":
+		return db.AutoMigrate(SharedFolder{})
+
+	case "SharedNote":
+		return db.AutoMigrate(SharedNote{})
+
 	case "SharedVault":
 		return db.AutoMigrate(SharedVault{})
 
 	case "Storage":
 		return db.AutoMigrate(Storage{})
 
-	case "SyncLog":
-		return db.AutoMigrate(SyncLog{})
+	case "VaultMember":
+		return db.AutoMigrate(VaultMember{})
 
 	case "User":
 		return db.AutoMigrate(User{})
