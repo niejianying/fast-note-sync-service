@@ -48,6 +48,7 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 		syncLogHandler := api_router.NewSyncLogHandler(appContainer)
 		tokenHandler := api_router.NewTokenHandler(appContainer)
 		friendHandler := api_router.NewFriendRelationshipHandler(appContainer)
+		vaultShareHandler := api_router.NewVaultShareHandler(appContainer)
 
 		// No-auth WebGUI restricted routes
 		// 免认证但仅限 WebGUI 访问的路由组
@@ -233,6 +234,14 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 			auth.DELETE("/friend/:uid", friendHandler.RemoveFriend)
 			auth.GET("/friends", friendHandler.ListFriends)
 			auth.GET("/friend/requests", friendHandler.ListPendingRequests)
+
+			// Vault share routes
+			// 仓库共享路由
+			auth.POST("/vault/share", vaultShareHandler.Share)
+			auth.POST("/vault/share/:id/respond", vaultShareHandler.Respond)
+			auth.DELETE("/vault/share/:id", vaultShareHandler.Revoke)
+			auth.GET("/vault/shares/incoming", vaultShareHandler.ListIncoming)
+			auth.GET("/vault/shares/outgoing", vaultShareHandler.ListOutgoing)
 		}
 	}
 }

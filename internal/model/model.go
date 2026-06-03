@@ -52,6 +52,9 @@ func AutoMigrate(db *gorm.DB, key string) error {
 	case "Setting":
 		return db.AutoMigrate(Setting{})
 
+	case "SharedVault":
+		return db.AutoMigrate(SharedVault{})
+
 	case "Storage":
 		return db.AutoMigrate(Storage{})
 
