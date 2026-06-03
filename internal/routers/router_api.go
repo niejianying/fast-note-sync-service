@@ -47,6 +47,7 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 		settingHandler := api_router.NewSettingHandler(appContainer, wss)
 		syncLogHandler := api_router.NewSyncLogHandler(appContainer)
 		tokenHandler := api_router.NewTokenHandler(appContainer)
+		friendHandler := api_router.NewFriendRelationshipHandler(appContainer)
 
 		// No-auth WebGUI restricted routes
 		// 免认证但仅限 WebGUI 访问的路由组
@@ -224,6 +225,14 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 				webguiGroup.POST("/token/:id/rotate", tokenHandler.Rotate)
 				webguiGroup.GET("/token/:id/logs", tokenHandler.ListLogs)
 			}
+
+			// Friend relationship routes
+			// 好友关系路由
+			auth.POST("/friend/add", friendHandler.AddFriend)
+			auth.POST("/friend/respond", friendHandler.RespondToRequest)
+			auth.DELETE("/friend/:uid", friendHandler.RemoveFriend)
+			auth.GET("/friends", friendHandler.ListFriends)
+			auth.GET("/friend/requests", friendHandler.ListPendingRequests)
 		}
 	}
 }

@@ -24,6 +24,7 @@ type Services struct {
 	NgrokService       service.NgrokService
 	CloudflareService  service.CloudflareService
 	SyncLogService     service.SyncLogService
+	FriendRelationshipService service.FriendRelationshipService
 }
 
 // initServices initializes all services
@@ -87,6 +88,12 @@ func initServices(cfg *AppConfig, infra *Infra, repos *Repositories, logger *zap
 	s.NoteLinkService = service.NewNoteLinkService(repos.NoteLinkRepo, repos.NoteRepo, s.VaultService)
 	s.NgrokService = service.NewNgrokService(logger, cfg.Ngrok.AuthToken, cfg.Ngrok.Domain)
 	s.CloudflareService = service.NewCloudflareService(logger)
+	s.FriendRelationshipService = service.NewFriendRelationshipService(
+		repos.FriendRelationshipRepo,
+		repos.UserRepo,
+		logger,
+		svcConfig,
+	)
 
 	return s
 }
