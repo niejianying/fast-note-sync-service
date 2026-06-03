@@ -52,6 +52,8 @@ func (s *vaultShareService) domainToDTO(d *domain.SharedVault) *dto.SharedVaultD
 		VaultName: d.VaultName,
 		OwnerUID:  d.OwnerUID,
 		TargetUID: d.TargetUID,
+		VaultKey:  d.VaultKey,
+		Token:     d.Token,
 		Status:    string(d.Status),
 		CreatedAt: timex.Time(d.CreatedAt),
 		UpdatedAt: timex.Time(d.UpdatedAt),
@@ -93,6 +95,18 @@ func (s *vaultShareService) Share(ctx context.Context, uid int64, params *dto.Va
 		UpdatedAt: time.Now(),
 	}
 
+	// Create an access token for the target user to access this vault
+	tokenResp, err := s.tokenService.Create(ctx, uid, &dto.TokenIssueRequest{
+		ClientType:  "WebGui",
+		Protocol:    "*",
+		ExpiredDays: 365,
+		Vaults:      params.VaultName,
+	})
+	if err != nil {
+		return nil, code.ErrorTokenGenerate.WithDetails(err.Error())
+	}
+	sv.Token = tokenResp.TokenString
+
 	created, err := s.sharedRepo.Create(ctx, sv)
 	if err != nil {
 		return nil, code.ErrorDBQuery.WithDetails(err.Error())
@@ -118,15 +132,16 @@ func (s *vaultShareService) Respond(ctx context.Context, uid int64, id int64, pa
 	} else {
 		sv.Status = domain.SharedVaultDeclined
 	}
+	sv.UpdatedAt = time.Now()
 
 	if err := s.sharedRepo.Update(ctx, sv); err != nil {
 		return nil, code.ErrorDBQuery.WithDetails(err.Error())
 	}
 
-	// If accepted, hide vaultKey in response (already sent at share time)
 	dto := s.domainToDTO(sv)
 	if params.Accept {
 		dto.VaultKey = sv.VaultKey
+		dto.Token = sv.Token
 	}
 
 	return dto, nil
