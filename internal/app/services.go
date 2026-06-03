@@ -25,6 +25,7 @@ type Services struct {
 	CloudflareService  service.CloudflareService
 	SyncLogService     service.SyncLogService
 	FriendRelationshipService service.FriendRelationshipService
+	VaultShareService  service.VaultShareService
 }
 
 // initServices initializes all services
@@ -91,6 +92,13 @@ func initServices(cfg *AppConfig, infra *Infra, repos *Repositories, logger *zap
 	s.FriendRelationshipService = service.NewFriendRelationshipService(
 		repos.FriendRelationshipRepo,
 		repos.UserRepo,
+		logger,
+		svcConfig,
+	)
+	s.VaultShareService = service.NewVaultShareService(
+		repos.SharedVaultRepo,
+		repos.FriendRelationshipRepo,
+		s.TokenService,
 		logger,
 		svcConfig,
 	)
