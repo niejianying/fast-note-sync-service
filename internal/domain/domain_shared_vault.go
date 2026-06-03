@@ -19,7 +19,6 @@ type SharedVault struct {
 	OwnerUID  int64
 	TargetUID int64
 	VaultKey  string
-	Token     string
 	Status    SharedVaultStatus
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -20,26 +20,26 @@ type VaultShareService interface {
 }
 
 type vaultShareService struct {
-	sharedRepo   domain.SharedVaultRepository
-	friendRepo   domain.FriendRelationshipRepository
-	tokenService TokenService
-	logger       *zap.Logger
-	config       *ServiceConfig
+	sharedRepo  domain.SharedVaultRepository
+	memberRepo  domain.VaultMemberRepository
+	friendRepo  domain.FriendRelationshipRepository
+	logger      *zap.Logger
+	config      *ServiceConfig
 }
 
 func NewVaultShareService(
 	sharedRepo domain.SharedVaultRepository,
+	memberRepo domain.VaultMemberRepository,
 	friendRepo domain.FriendRelationshipRepository,
-	tokenService TokenService,
 	logger *zap.Logger,
 	config *ServiceConfig,
 ) VaultShareService {
 	return &vaultShareService{
-		sharedRepo:   sharedRepo,
-		friendRepo:   friendRepo,
-		tokenService: tokenService,
-		logger:       logger,
-		config:       config,
+		sharedRepo: sharedRepo,
+		memberRepo: memberRepo,
+		friendRepo: friendRepo,
+		logger:     logger,
+		config:     config,
 	}
 }
 
@@ -53,7 +53,6 @@ func (s *vaultShareService) domainToDTO(d *domain.SharedVault) *dto.SharedVaultD
 		OwnerUID:  d.OwnerUID,
 		TargetUID: d.TargetUID,
 		VaultKey:  d.VaultKey,
-		Token:     d.Token,
 		Status:    string(d.Status),
 		CreatedAt: timex.Time(d.CreatedAt),
 		UpdatedAt: timex.Time(d.UpdatedAt),
@@ -95,18 +94,6 @@ func (s *vaultShareService) Share(ctx context.Context, uid int64, params *dto.Va
 		UpdatedAt: time.Now(),
 	}
 
-	// Create an access token for the target user to access this vault
-	tokenResp, err := s.tokenService.Create(ctx, uid, &dto.TokenIssueRequest{
-		ClientType:  "WebGui",
-		Protocol:    "*",
-		ExpiredDays: 365,
-		Vaults:      params.VaultName,
-	})
-	if err != nil {
-		return nil, code.ErrorTokenGenerate.WithDetails(err.Error())
-	}
-	sv.Token = tokenResp.TokenString
-
 	created, err := s.sharedRepo.Create(ctx, sv)
 	if err != nil {
 		return nil, code.ErrorDBQuery.WithDetails(err.Error())
@@ -129,6 +116,15 @@ func (s *vaultShareService) Respond(ctx context.Context, uid int64, id int64, pa
 
 	if params.Accept {
 		sv.Status = domain.SharedVaultAccepted
+		// Add both users as vault members so they can share the same data
+		for _, memberUID := range []int64{sv.OwnerUID, sv.TargetUID} {
+			_, err := s.memberRepo.Add(ctx, &domain.VaultMember{
+				VaultName: sv.VaultName, OwnerUID: sv.OwnerUID, MemberUID: memberUID,
+			})
+			if err != nil {
+				s.logger.Error("failed to add vault member", zap.Int64("uid", memberUID), zap.Error(err))
+			}
+		}
 	} else {
 		sv.Status = domain.SharedVaultDeclined
 	}
@@ -141,7 +137,6 @@ func (s *vaultShareService) Respond(ctx context.Context, uid int64, id int64, pa
 	dto := s.domainToDTO(sv)
 	if params.Accept {
 		dto.VaultKey = sv.VaultKey
-		dto.Token = sv.Token
 	}
 
 	return dto, nil
@@ -155,6 +150,7 @@ func (s *vaultShareService) Revoke(ctx context.Context, uid int64, id int64) err
 	if sv.OwnerUID != uid {
 		return code.ErrorInvalidParams.WithDetails("Not your share record")
 	}
+	_ = s.memberRepo.Remove(ctx, sv.VaultName, sv.TargetUID)
 	return s.sharedRepo.Delete(ctx, id)
 }
 
@@ -166,7 +162,6 @@ func (s *vaultShareService) ListIncoming(ctx context.Context, uid int64) ([]*dto
 	var result []*dto.SharedVaultDTO
 	for _, sv := range list {
 		d := s.domainToDTO(sv)
-		// Only return vaultKey for accepted shares
 		if sv.Status == domain.SharedVaultAccepted {
 			d.VaultKey = sv.VaultKey
 		}
