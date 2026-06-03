@@ -48,7 +48,7 @@ func (s *sharedNoteService) ModifyOrCreate(ctx context.Context, uid int64, param
 	}
 	return true, &dto.NoteDTO{
 		Path: params.Path, PathHash: params.PathHash,
-		ContentHash: params.ContentHash, Size: params.Size,
+		Content: params.Content, ContentHash: params.ContentHash, Size: params.Size,
 		Mtime: params.Mtime, Ctime: params.Ctime,
 		ClientType: s.clientType, ClientName: s.clientName, ClientVersion: s.clientVer,
 		UpdatedTimestamp: time.Now().UnixMilli(),
