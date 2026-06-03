@@ -6,9 +6,11 @@ import (
 
 	"github.com/haierkeys/fast-note-sync-service/internal/app"
 	"github.com/haierkeys/fast-note-sync-service/internal/domain"
+	"github.com/haierkeys/fast-note-sync-service/internal/dto"
 	"github.com/haierkeys/fast-note-sync-service/internal/routers/websocket_router"
 	pkgapp "github.com/haierkeys/fast-note-sync-service/pkg/app"
 	"github.com/haierkeys/fast-note-sync-service/pkg/code"
+	"go.uber.org/zap"
 )
 
 func initWebSocketRoutes(wss *pkgapp.WebsocketServer, appContainer *app.App) {
@@ -119,4 +121,81 @@ func initWebSocketRoutes(wss *pkgapp.WebsocketServer, appContainer *app.App) {
 
 		return dbToken.Scope, dbToken.Vaults, nil
 	})
+
+	// Register online status hooks
+	wss.UseUserConnect(func(uid int64) {
+		broadcastMemberStatus(context.Background(), appContainer, uid, true)
+	})
+	wss.UseUserDisconnect(func(uid int64) {
+		broadcastMemberStatus(context.Background(), appContainer, uid, false)
+	})
+}
+
+func broadcastMemberStatus(ctx context.Context, appContainer *app.App, uid int64, online bool) {
+	if appContainer.VaultMemberRepo == nil || appContainer.SharedVaultRepo == nil || appContainer.UserRepo == nil || appContainer.GetWSS() == nil {
+		return
+	}
+
+	// Get user display name
+	username := fmt.Sprintf("%d", uid)
+	if user, err := appContainer.UserRepo.GetByUID(ctx, uid); err == nil && user != nil {
+		if user.Username != "" {
+			username = user.Username
+		} else if user.Email != "" {
+			username = user.Email
+		}
+	}
+
+	// Collect all shared vaults this user is part of (as member or owner)
+	vaultSet := make(map[string]struct{})
+
+	// Vaults where user is a member
+	memberships, err := appContainer.VaultMemberRepo.ListByMember(ctx, uid)
+	if err == nil {
+		for _, m := range memberships {
+			vaultSet[m.VaultName] = struct{}{}
+		}
+	}
+
+	// Vaults where user is the owner (accepted shares only)
+	ownedShares, err := appContainer.SharedVaultRepo.ListByOwner(ctx, uid)
+	if err == nil {
+		for _, s := range ownedShares {
+			if s.Status == domain.SharedVaultAccepted {
+				vaultSet[s.VaultName] = struct{}{}
+			}
+		}
+	}
+
+	if len(vaultSet) == 0 {
+		return
+	}
+
+	action := websocket_router.MemberOnline
+	if !online {
+		action = websocket_router.MemberOffline
+	}
+
+	for vaultName := range vaultSet {
+		payload := dto.MemberStatusMessage{
+			UID:      uid,
+			Nickname: username,
+			Vault:    vaultName,
+			Online:   online,
+		}
+		c := code.Success.WithData(payload).WithVault(vaultName)
+
+		vaultMembers, err := appContainer.VaultMemberRepo.ListByVault(ctx, vaultName)
+		if err != nil {
+			appContainer.Logger().Warn("broadcastMemberStatus: ListByVault failed",
+				zap.String("vault", vaultName), zap.Error(err))
+			continue
+		}
+		for _, vm := range vaultMembers {
+			if vm.MemberUID == uid {
+				continue
+			}
+			appContainer.GetWSS().BroadcastToUser(vm.MemberUID, c, action)
+		}
+	}
 }
