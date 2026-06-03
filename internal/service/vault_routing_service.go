@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/haierkeys/fast-note-sync-service/internal/domain"
-	"github.com/haierkeys/fast-note-sync-service/pkg/code"
 )
 
 type VaultRoutingService interface {
@@ -12,7 +11,6 @@ type VaultRoutingService interface {
 	GetNoteService(ctx context.Context, vaultName string, clientType, clientName, clientVersion string) NoteService
 	GetFolderService(ctx context.Context, vaultName string, clientType, clientName, clientVersion string) FolderService
 	GetFileService(ctx context.Context, vaultName string, clientType, clientName, clientVersion string) FileService
-	BroadcastToMembers(ctx context.Context, vaultName string, excludeUID int64, code *code.Code, action string, data interface{})
 }
 
 type vaultRoutingService struct {

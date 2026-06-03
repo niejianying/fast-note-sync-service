@@ -28,6 +28,7 @@ type NoteModifyOrCreateRequest struct {
 	BaseHashMissing bool   `json:"baseHashMissing" form:"baseHashMissing" example:"false"`       // Marks if baseHash is unavailable // 标记基准哈希是否缺失
 	Content         string `json:"content" form:"content" binding:"" example:"# Hello World"`    // Note content // 笔记内容
 	ContentHash     string `json:"contentHash" form:"contentHash" binding:"" example:"chash012"` // Content hash // 内容哈希
+	Size            int64  `json:"size" form:"size" example:"1024"`                              // File size // 文件大小
 	Ctime           int64  `json:"ctime" form:"ctime" example:"1700000000"`                      // Creation timestamp // 创建时间戳
 	Mtime           int64  `json:"mtime" form:"mtime" example:"1700000000"`                      // Modification timestamp // 修改时间戳
 	CreateOnly      bool   `json:"createOnly" form:"createOnly" example:"false"`                 // If true, fail if note already exists // 如果为 true，笔记已存在则失败
