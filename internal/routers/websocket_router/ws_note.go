@@ -375,6 +375,15 @@ func (h *NoteWSHandler) NoteModify(c *pkgapp.WebsocketClient, msg *pkgapp.WebSoc
 				UpdatedTimestamp: note.UpdatedTimestamp,
 			},
 		).WithVault(params.Vault), isExcludeSelf, NoteSyncModify)
+		h.broadcastToVaultMembers(ctx, params.Vault, c.User.UID, dto.NoteSyncModifyMessage{
+			Path:             note.Path,
+			PathHash:         note.PathHash,
+			Content:          note.Content,
+			ContentHash:      note.ContentHash,
+			Ctime:            note.Ctime,
+			Mtime:            note.Mtime,
+			UpdatedTimestamp: note.UpdatedTimestamp,
+		}, NoteSyncModify)
 		return
 
 	case "UpdateMtime":
@@ -542,6 +551,22 @@ func (h *NoteWSHandler) NoteDelete(c *pkgapp.WebsocketClient, msg *pkgapp.WebSoc
 			UpdatedTimestamp: note.UpdatedTimestamp,
 		},
 	).WithVault(params.Vault), true, NoteSyncDelete)
+	h.broadcastToVaultMembers(ctx, params.Vault, c.User.UID, dto.NoteSyncDeleteMessage{
+		Path:             note.Path,
+		PathHash:         note.PathHash,
+		Ctime:            note.Ctime,
+		Mtime:            note.Mtime,
+		Size:             note.Size,
+		UpdatedTimestamp: note.UpdatedTimestamp,
+	}, NoteSyncDelete)
+	h.broadcastToVaultMembers(ctx, params.Vault, c.User.UID, dto.NoteSyncDeleteMessage{
+		Path:             note.Path,
+		PathHash:         note.PathHash,
+		Ctime:            note.Ctime,
+		Mtime:            note.Mtime,
+		Size:             note.Size,
+		UpdatedTimestamp: note.UpdatedTimestamp,
+	}, NoteSyncDelete)
 }
 
 // NoteRename handles WebSocket messages for file renaming
@@ -601,6 +626,17 @@ func (h *NoteWSHandler) NoteRename(c *pkgapp.WebsocketClient, msg *pkgapp.WebSoc
 			OldPathHash:      oldNote.PathHash,
 		},
 	).WithVault(params.Vault), true, NoteSyncRename)
+	h.broadcastToVaultMembers(c.Context(), params.Vault, uid, dto.NoteSyncRenameMessage{
+		Path:             newNote.Path,
+		PathHash:         newNote.PathHash,
+		ContentHash:      newNote.ContentHash,
+		Ctime:            newNote.Ctime,
+		Mtime:            newNote.Mtime,
+		Size:             newNote.Size,
+		UpdatedTimestamp: newNote.UpdatedTimestamp,
+		OldPath:          oldNote.Path,
+		OldPathHash:      oldNote.PathHash,
+	}, NoteSyncRename)
 }
 
 func (h *NoteWSHandler) NoteRePush(c *pkgapp.WebsocketClient, msg *pkgapp.WebSocketMessage) {
@@ -799,6 +835,14 @@ func (h *NoteWSHandler) NoteSync(c *pkgapp.WebsocketClient, msg *pkgapp.WebSocke
 						UpdatedTimestamp: 0,
 					},
 				).WithVault(params.Vault), true, NoteSyncDelete)
+				h.broadcastToVaultMembers(ctx, params.Vault, c.User.UID, dto.NoteSyncDeleteMessage{
+					Path:             delNote.Path,
+					PathHash:         delNote.PathHash,
+					Ctime:            0,
+					Mtime:            0,
+					Size:             0,
+					UpdatedTimestamp: 0,
+				}, NoteSyncDelete)
 			}
 		}
 	}

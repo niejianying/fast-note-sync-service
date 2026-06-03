@@ -109,6 +109,34 @@ func (h *WSHandler) respondErrorWithData(c *pkgapp.WebsocketClient, codeErr *cod
 	c.ToResponse(codeErr.WithDetails(err.Error()).WithData(data))
 }
 
+// broadcastToVaultMembers broadcasts a message to all members of a shared vault
+// broadcastToVaultMembers 向共享 vault 的所有成员广播消息
+func (h *WSHandler) broadcastToVaultMembers(ctx context.Context, vaultName string, excludeUID int64, payload interface{}, action string) {
+	if h.App.VaultRoutingService == nil || h.App.VaultMemberRepo == nil || h.App.GetWSS() == nil {
+		return
+	}
+	shared, err := h.App.VaultRoutingService.IsSharedVault(ctx, vaultName)
+	if err != nil {
+		h.logWarn(nil, "broadcastToVaultMembers.IsSharedVault", zap.Error(err))
+		return
+	}
+	if !shared {
+		return
+	}
+	members, err := h.App.VaultMemberRepo.ListByVault(ctx, vaultName)
+	if err != nil {
+		h.logWarn(nil, "broadcastToVaultMembers.ListByVault", zap.Error(err))
+		return
+	}
+	c := code.Success.WithData(payload).WithVault(vaultName)
+	for _, m := range members {
+		if m.MemberUID == excludeUID {
+			continue
+		}
+		h.App.GetWSS().BroadcastToUser(m.MemberUID, c, action)
+	}
+}
+
 // GetTraceID retrieves Trace ID from WebSocket client
 // Directly use WebsocketClient.TraceID field, avoiding fetching from potentially invalid HTTP context
 // GetTraceID 从 WebSocket 客户端获取 Trace ID
