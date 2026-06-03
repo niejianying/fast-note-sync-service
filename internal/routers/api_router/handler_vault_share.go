@@ -35,23 +35,8 @@ func (h *VaultShareHandler) Share(c *gin.Context) {
 		return
 	}
 
-	// Owner must provide vaultKey in the request body (encrypted by client)
-	vaultKey := c.PostForm("vaultKey")
-	if vaultKey == "" {
-		var body map[string]interface{}
-		if err := c.ShouldBindJSON(&body); err == nil {
-			if v, ok := body["vaultKey"]; ok {
-				vaultKey = v.(string)
-			}
-		}
-	}
-	if vaultKey == "" {
-		response.ToResponse(code.ErrorInvalidParams.WithDetails("vaultKey is required"))
-		return
-	}
-
 	ctx := c.Request.Context()
-	result, err := h.App.VaultShareService.Share(ctx, uid, params, vaultKey)
+	result, err := h.App.VaultShareService.Share(ctx, uid, params, params.VaultKey)
 	if err != nil {
 		h.logError(ctx, "VaultShareHandler.Share", err)
 		apperrors.ErrorResponse(c, err)

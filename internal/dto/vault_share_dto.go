@@ -5,6 +5,7 @@ import "github.com/haierkeys/fast-note-sync-service/pkg/timex"
 type VaultShareRequest struct {
 	FriendUID int64  `json:"friendUid" form:"friendUid" binding:"required"`
 	VaultName string `json:"vaultName" form:"vaultName" binding:"required"`
+	VaultKey  string `json:"vaultKey" form:"vaultKey" binding:"required"`
 }
 
 type VaultShareRespondRequest struct {
