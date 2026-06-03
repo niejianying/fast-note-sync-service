@@ -117,15 +117,18 @@ func (s *friendRelationshipService) RemoveFriend(ctx context.Context, uid, frien
 }
 
 func (s *friendRelationshipService) ListFriends(ctx context.Context, uid int64) ([]*dto.FriendRelationshipDTO, error) {
-	rels, err := s.friendRepo.ListByUID(ctx, uid)
+	rels, err := s.friendRepo.ListAcceptedByUID(ctx, uid)
 	if err != nil {
 		return nil, code.ErrorDBQuery.WithDetails(err.Error())
 	}
 	var result []*dto.FriendRelationshipDTO
 	for _, r := range rels {
-		if r.Status == domain.FriendStatusAccepted {
-			result = append(result, s.domainToDTO(r))
+		// Normalize: if the current user is the friendUID, swap to show friendUid as the friend
+		dto := s.domainToDTO(r)
+		if dto.FriendUID == uid {
+			dto.UID, dto.FriendUID = dto.FriendUID, dto.UID
 		}
+		result = append(result, dto)
 	}
 	return result, nil
 }

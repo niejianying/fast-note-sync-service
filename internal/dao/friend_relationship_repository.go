@@ -132,6 +132,19 @@ func (r *friendRelationshipRepository) ListByUID(ctx context.Context, uid int64)
 	return res, nil
 }
 
+func (r *friendRelationshipRepository) ListAcceptedByUID(ctx context.Context, uid int64) ([]*domain.FriendRelationship, error) {
+	q := r.friendQuery().FriendRelationship
+	ms, err := q.WithContext(ctx).Where(q.UID.Eq(uid).Or(q.FriendUID.Eq(uid)), q.Status.Eq("accepted")).Find()
+	if err != nil {
+		return nil, err
+	}
+	var res []*domain.FriendRelationship
+	for _, m := range ms {
+		res = append(res, r.toDomain(m))
+	}
+	return res, nil
+}
+
 func (r *friendRelationshipRepository) ListPendingByUID(ctx context.Context, uid int64) ([]*domain.FriendRelationship, error) {
 	q := r.friendQuery().FriendRelationship
 	ms, err := q.WithContext(ctx).Where(q.FriendUID.Eq(uid), q.Status.Eq("pending")).Find()

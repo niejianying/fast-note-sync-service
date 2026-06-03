@@ -34,6 +34,7 @@ type FriendRelationshipRepository interface {
 	Update(ctx context.Context, rel *FriendRelationship) error
 	Delete(ctx context.Context, uid, friendUID int64) error
 	ListByUID(ctx context.Context, uid int64) ([]*FriendRelationship, error)
+	ListAcceptedByUID(ctx context.Context, uid int64) ([]*FriendRelationship, error)
 	ListPendingByUID(ctx context.Context, uid int64) ([]*FriendRelationship, error)
 	GetReverse(ctx context.Context, uid, friendUID int64) (*FriendRelationship, error)
 }
