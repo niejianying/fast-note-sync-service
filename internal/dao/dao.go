@@ -767,11 +767,13 @@ func (d *Dao) ensureMysqlDatabase(dbName string) error {
 		}
 	}()
 
-	// Execute create database statement
 	// 执行创建数据库语句
-	// Note: MySQL database names cannot contain special characters; user_<uid> is safe
 	// 注意：MySQL 库名不能包含特殊字符，user_<uid> 是安全的
-	err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci", dbName)).Error
+	charset := d.userConfig.Charset
+	if charset == "" {
+		charset = "utf8mb4"
+	}
+	err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET %s", dbName, charset)).Error
 	if err != nil {
 		return fmt.Errorf("failed to create database %s: %w", dbName, err)
 	}
