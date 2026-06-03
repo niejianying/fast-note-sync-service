@@ -50,7 +50,7 @@ buildDir = $(rootDir)/build
         push-online push-dev \
         build-macos-amd64 build-macos-arm64 build-linux-amd64 \
         build-linux-arm64 build-linux-arm build-windows-amd64 gox-linux gox-all \
-		docs fmt update air dev ver gen sup proto
+		docs fmt update air dev ver gen sup proto synctest
 
 # 默认目标
 all: test build-all
@@ -146,6 +146,11 @@ gox-linux:
 
 gox-all:
 	$(CGO) GOARM=7 gox ${LDFLAGS} -osarch="darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 linux/arm windows/amd64" -output="$(buildDir)/{{.OS}}_{{.Arch}}/${P_BIN}"
+
+# Cross-User Sync Test Tool
+synctest:
+	mkdir -p $(buildDir)
+	go build -o $(buildDir)/synctest ./cmd/synctest/
 
 
 # -------------------------
