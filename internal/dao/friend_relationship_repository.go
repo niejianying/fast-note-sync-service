@@ -133,14 +133,17 @@ func (r *friendRelationshipRepository) ListByUID(ctx context.Context, uid int64)
 }
 
 func (r *friendRelationshipRepository) ListAcceptedByUID(ctx context.Context, uid int64) ([]*domain.FriendRelationship, error) {
-	q := r.friendQuery().FriendRelationship
-	ms, err := q.WithContext(ctx).Where(q.UID.Eq(uid).Or(q.FriendUID.Eq(uid)), q.Status.Eq("accepted")).Find()
+	db := r.dao.Db
+	_ = db.AutoMigrate(&model.FriendRelationship{})
+	var ms []model.FriendRelationship
+	err := db.WithContext(ctx).Where("(uid = ? OR friend_uid = ?) AND status = ?", uid, uid, "accepted").Find(&ms).Error
 	if err != nil {
 		return nil, err
 	}
 	var res []*domain.FriendRelationship
 	for _, m := range ms {
-		res = append(res, r.toDomain(m))
+		v := m
+		res = append(res, r.toDomain(&v))
 	}
 	return res, nil
 }
