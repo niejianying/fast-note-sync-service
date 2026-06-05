@@ -8,6 +8,7 @@ import (
 	"github.com/haierkeys/fast-note-sync-service/internal/app"
 	"github.com/haierkeys/fast-note-sync-service/internal/dto"
 	"github.com/haierkeys/fast-note-sync-service/internal/middleware"
+	"github.com/haierkeys/fast-note-sync-service/internal/routers/websocket_router"
 	pkgapp "github.com/haierkeys/fast-note-sync-service/pkg/app"
 	"github.com/haierkeys/fast-note-sync-service/pkg/code"
 	apperrors "github.com/haierkeys/fast-note-sync-service/pkg/errors"
@@ -54,6 +55,17 @@ func (h *VaultShareHandler) Share(c *gin.Context) {
 	}
 
 	response.ToResponse(code.Success.WithData(result))
+
+	// Notify the target user about the vault share invitation
+	if h.App.GetWSS() != nil {
+		h.App.GetWSS().BroadcastToUser(params.FriendUID,
+			code.Success.WithData(map[string]interface{}{
+				"id":        result.ID,
+				"vaultName": result.VaultName,
+				"fromUid":   uid,
+			}),
+			websocket_router.ShareSyncRefresh)
+	}
 }
 
 func (h *VaultShareHandler) Respond(c *gin.Context) {
@@ -87,6 +99,16 @@ func (h *VaultShareHandler) Respond(c *gin.Context) {
 	}
 
 	response.ToResponse(code.Success.WithData(result))
+
+	// If rejected, notify the owner
+	if h.App.GetWSS() != nil && result != nil && !params.Accept {
+		h.App.GetWSS().BroadcastToUser(result.OwnerUID,
+			code.Success.WithData(map[string]interface{}{
+				"id":        result.ID,
+				"vaultName": result.VaultName,
+			}),
+			websocket_router.ShareSyncRejected)
+	}
 }
 
 func (h *VaultShareHandler) Revoke(c *gin.Context) {

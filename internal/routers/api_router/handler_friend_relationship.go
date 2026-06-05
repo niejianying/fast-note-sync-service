@@ -8,6 +8,7 @@ import (
 	"github.com/haierkeys/fast-note-sync-service/internal/app"
 	"github.com/haierkeys/fast-note-sync-service/internal/dto"
 	"github.com/haierkeys/fast-note-sync-service/internal/middleware"
+	"github.com/haierkeys/fast-note-sync-service/internal/routers/websocket_router"
 	pkgapp "github.com/haierkeys/fast-note-sync-service/pkg/app"
 	"github.com/haierkeys/fast-note-sync-service/pkg/code"
 	apperrors "github.com/haierkeys/fast-note-sync-service/pkg/errors"
@@ -58,6 +59,13 @@ func (h *FriendRelationshipHandler) AddFriend(c *gin.Context) {
 	}
 
 	response.ToResponse(code.Success.WithData(result))
+
+	// Notify the target user about the new friend request
+	if h.App.GetWSS() != nil {
+		h.App.GetWSS().BroadcastToUser(params.FriendUID,
+			code.Success.WithData(map[string]int64{"uid": uid}),
+			websocket_router.FriendRequestUpdate)
+	}
 }
 
 func (h *FriendRelationshipHandler) RespondToRequest(c *gin.Context) {
@@ -86,6 +94,13 @@ func (h *FriendRelationshipHandler) RespondToRequest(c *gin.Context) {
 	}
 
 	response.ToResponse(code.Success.WithData(result))
+
+	// If rejected, notify the requester
+	if h.App.GetWSS() != nil && !params.Accept {
+		h.App.GetWSS().BroadcastToUser(params.FriendUID,
+			code.Success.WithData(map[string]int64{"uid": uid}),
+			websocket_router.FriendRequestRejected)
+	}
 }
 
 func (h *FriendRelationshipHandler) RemoveFriend(c *gin.Context) {

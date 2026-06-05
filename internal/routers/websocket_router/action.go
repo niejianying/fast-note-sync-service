@@ -228,6 +228,18 @@ const (
 	// ShareSyncRefresh 通知客户端刷新分享状态
 	ShareSyncRefresh WebSocketSendAction = "ShareSyncRefresh"
 
+	// ---------------- Friend & Share Notifications ----------------
+
+	// FriendRequestUpdate notify target user about a new friend request
+	// FriendRequestUpdate 通知目标用户有新的好友请求
+	FriendRequestUpdate WebSocketSendAction = "FriendRequestUpdate"
+	// FriendRequestRejected notify requester that their friend request was rejected
+	// FriendRequestRejected 通知发起方好友请求被拒绝
+	FriendRequestRejected WebSocketSendAction = "FriendRequestRejected"
+	// ShareSyncRejected notify sharer that their vault share was rejected
+	// ShareSyncRejected 通知发起方仓库共享被拒绝
+	ShareSyncRejected WebSocketSendAction = "ShareSyncRejected"
+
 	// ---------------- Member Online Status ----------------
 
 	// MemberOnline notify vault members that a member came online
