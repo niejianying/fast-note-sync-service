@@ -61,11 +61,27 @@ func (s *friendRelationshipService) AddFriend(ctx context.Context, uid int64, pa
 
 	existing, err := s.friendRepo.GetByUIDAndFriend(ctx, uid, params.FriendUID)
 	if err == nil && existing != nil {
+		if existing.Status == domain.FriendStatusBlocked {
+			existing.Status = domain.FriendStatusPending
+			existing.UpdatedAt = time.Now()
+			if err := s.friendRepo.Update(ctx, existing); err != nil {
+				return nil, code.ErrorDBQuery.WithDetails(err.Error())
+			}
+			return s.domainToDTO(existing), nil
+		}
 		return nil, code.ErrorFriendAlreadyExists
 	}
 
 	reverse, err := s.friendRepo.GetReverse(ctx, uid, params.FriendUID)
 	if err == nil && reverse != nil {
+		if reverse.Status == domain.FriendStatusBlocked {
+			reverse.Status = domain.FriendStatusPending
+			reverse.UpdatedAt = time.Now()
+			if err := s.friendRepo.Update(ctx, reverse); err != nil {
+				return nil, code.ErrorDBQuery.WithDetails(err.Error())
+			}
+			return s.domainToDTO(reverse), nil
+		}
 		return nil, code.ErrorFriendAlreadyExists
 	}
 
