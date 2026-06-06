@@ -9,7 +9,7 @@ type FriendRequestAdd struct {
 
 type FriendRequestRespond struct {
 	FriendUID int64 `json:"friendUid" form:"friendUid" binding:"required"`
-	Accept    bool  `json:"accept" form:"accept" binding:"required"`
+	Accept    bool  `json:"accept" form:"accept"`
 }
 
 type FriendRelationshipDTO struct {
