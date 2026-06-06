@@ -64,13 +64,14 @@ func (s *vaultShareService) Share(ctx context.Context, uid int64, params *dto.Va
 		return nil, code.ErrorInvalidParams.WithDetails("Cannot share with yourself")
 	}
 
-	rels, err := s.friendRepo.ListByUID(ctx, uid)
+	rels, err := s.friendRepo.ListAcceptedByUID(ctx, uid)
 	if err != nil {
 		return nil, code.ErrorDBQuery.WithDetails(err.Error())
 	}
 	isFriend := false
 	for _, r := range rels {
-		if r.FriendUID == params.FriendUID && r.IsActive() {
+		if ((r.UID == uid && r.FriendUID == params.FriendUID) ||
+			(r.UID == params.FriendUID && r.FriendUID == uid)) && r.IsActive() {
 			isFriend = true
 			break
 		}
