@@ -71,7 +71,8 @@ func (h *FriendRelationshipHandler) AddFriend(c *gin.Context) {
 	h.createInboxItem(ctx, params.FriendUID,
 		"friend_req_"+strconv.FormatInt(uid, 10),
 		"friendRequest", "好友请求",
-		"用户 #"+strconv.FormatInt(uid, 10)+" 请求添加你为好友", "")
+		"用户 #"+strconv.FormatInt(uid, 10)+" 请求添加你为好友",
+		`{"uid":`+strconv.FormatInt(uid, 10)+`}`)
 }
 
 func (h *FriendRelationshipHandler) RespondToRequest(c *gin.Context) {
@@ -119,12 +120,14 @@ func (h *FriendRelationshipHandler) RespondToRequest(c *gin.Context) {
 		h.createInboxItem(ctx, params.FriendUID,
 			"friend_accepted_"+strconv.FormatInt(uid, 10),
 			"friendRequest", "好友请求已接受",
-			"用户 #"+strconv.FormatInt(uid, 10)+" 接受了你的好友请求", "")
+			"用户 #"+strconv.FormatInt(uid, 10)+" 接受了你的好友请求",
+			`{"uid":`+strconv.FormatInt(uid, 10)+`}`)
 	} else {
 		h.createInboxItem(ctx, params.FriendUID,
 			"friend_rejected_"+strconv.FormatInt(uid, 10),
 			"friendRequest", "好友请求被拒绝",
-			"用户 #"+strconv.FormatInt(uid, 10)+" 拒绝了你的好友请求", "")
+			"用户 #"+strconv.FormatInt(uid, 10)+" 拒绝了你的好友请求",
+			`{"uid":`+strconv.FormatInt(uid, 10)+`}`)
 	}
 }
 

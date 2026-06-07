@@ -2,7 +2,9 @@ package api_router
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/haierkeys/fast-note-sync-service/internal/app"
@@ -184,11 +186,19 @@ func (h *VaultShareHandler) createVaultShareInboxItem(ctx context.Context, targe
 	if h.App.InboxItemService == nil {
 		return
 	}
+	// Extract share ID from itemID (e.g. "vault_share_5")
+	shareID := int64(0)
+	if parts := strings.Split(itemID, "_"); len(parts) > 0 {
+		if id, err := strconv.ParseInt(parts[len(parts)-1], 10, 64); err == nil {
+			shareID = id
+		}
+	}
 	_, _ = h.App.InboxItemService.AddItem(ctx, targetUID, &dto.InboxItemCreateRequest{
 		ItemID:   itemID,
 		Type:     "vaultShare",
 		Title:    "仓库共享邀请",
 		Subtitle: "用户 #" + strconv.FormatInt(fromUID, 10) + " 邀请你共享 \"" + vaultName + "\"",
+		Payload:  fmt.Sprintf(`{"id":%d,"vaultName":"%s","fromUid":%d}`, shareID, vaultName, fromUID),
 	})
 }
 
