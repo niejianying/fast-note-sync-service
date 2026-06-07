@@ -219,7 +219,23 @@ func (h *VaultHandler) Delete(c *gin.Context) {
 	// 获取请求上下文
 	ctx := c.Request.Context()
 
-	err := h.App.VaultService.Delete(ctx, uid, params.ID)
+	vaultID := params.ID
+	if vaultID == 0 && params.Vault != "" {
+		vault, err := h.App.VaultService.GetByName(ctx, uid, params.Vault)
+		if err != nil {
+			h.logError(ctx, "VaultHandler.Delete.GetByName", err)
+			apperrors.ErrorResponse(c, err)
+			return
+		}
+		vaultID = vault.ID
+	}
+
+	if vaultID == 0 {
+		response.ToResponse(code.ErrorInvalidParams.WithDetails("vault id or name is required"))
+		return
+	}
+
+	err := h.App.VaultService.Delete(ctx, uid, vaultID)
 	if err != nil {
 		h.logError(ctx, "VaultHandler.Delete", err)
 		apperrors.ErrorResponse(c, err)

@@ -9,10 +9,11 @@ type VaultPostRequest struct {
 	ID    int64  `json:"id" form:"id" example:"1"`                                // Vault ID (optional for update) // 保险库 ID（可选，用于更新）
 }
 
-// VaultGetRequest Request parameters for retrieving a vault
-// 获取保险库的请求参数
+// VaultGetRequest Request parameters for retrieving or deleting a vault
+// 获取或删除保险库的请求参数
 type VaultGetRequest struct {
-	ID int64 `form:"id" binding:"required,gte=1" example:"1"` // Vault ID // 保险库 ID
+	ID    int64  `form:"id" json:"id" example:"1"`    // Vault ID // 保险库 ID
+	Vault string `form:"vault" json:"vault"`          // Vault name (alternative to ID) // 保险库名称（ID 的替代）
 }
 
 // VaultRebuildIndexRequest Request parameters for rebuilding vault index
