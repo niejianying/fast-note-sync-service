@@ -242,7 +242,7 @@ func broadcastFriendStatus(ctx context.Context, appContainer *app.App, uid int64
 	wss := appContainer.GetWSS()
 	for _, f := range friends {
 		friendUID := f.FriendUID
-		if f.UID != uid {
+		if friendUID == uid {
 			friendUID = f.UID
 		}
 		wss.BroadcastToUser(friendUID, c, action)
@@ -322,7 +322,7 @@ func sendOnlineFriendsToUser(ctx context.Context, appContainer *app.App, newUID 
 	wss := appContainer.GetWSS()
 	for _, f := range friends {
 		friendUID := f.FriendUID
-		if f.UID != newUID {
+		if friendUID == newUID {
 			friendUID = f.UID
 		}
 		if !wss.IsUserOnline(friendUID) {
