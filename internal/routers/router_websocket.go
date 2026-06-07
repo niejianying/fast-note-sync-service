@@ -125,9 +125,13 @@ func initWebSocketRoutes(wss *pkgapp.WebsocketServer, appContainer *app.App) {
 	// Register online status hooks
 	wss.UseUserConnect(func(uid int64) {
 		broadcastMemberStatus(context.Background(), appContainer, uid, true)
+		broadcastFriendStatus(context.Background(), appContainer, uid, true)
+		sendOnlineMembersToUser(context.Background(), appContainer, uid)
+		sendOnlineFriendsToUser(context.Background(), appContainer, uid)
 	})
 	wss.UseUserDisconnect(func(uid int64) {
 		broadcastMemberStatus(context.Background(), appContainer, uid, false)
+		broadcastFriendStatus(context.Background(), appContainer, uid, false)
 	})
 }
 
@@ -197,5 +201,149 @@ func broadcastMemberStatus(ctx context.Context, appContainer *app.App, uid int64
 			}
 			appContainer.GetWSS().BroadcastToUser(vm.MemberUID, c, action)
 		}
+	}
+}
+
+// broadcastFriendStatus broadcasts the user's online/offline status to all accepted friends.
+func broadcastFriendStatus(ctx context.Context, appContainer *app.App, uid int64, online bool) {
+	if appContainer.FriendRelationshipRepo == nil || appContainer.UserRepo == nil || appContainer.GetWSS() == nil {
+		return
+	}
+
+	friends, err := appContainer.FriendRelationshipRepo.ListAcceptedByUID(ctx, uid)
+	if err != nil || len(friends) == 0 {
+		return
+	}
+
+	username := fmt.Sprintf("%d", uid)
+	if user, err := appContainer.UserRepo.GetByUID(ctx, uid); err == nil && user != nil {
+		if user.Username != "" {
+			username = user.Username
+		} else if user.Email != "" {
+			username = user.Email
+		}
+	}
+
+	action := websocket_router.MemberOnline
+	if !online {
+		action = websocket_router.MemberOffline
+	}
+
+	payload := dto.MemberStatusMessage{
+		UID:    uid,
+		Vault:  "",
+		Online: online,
+	}
+	// Use Nickname for display name (the frontend shows this)
+	payload.Nickname = username
+	c := code.Success.WithData(payload)
+	// No WithVault — frontend message.vault will be "" so vault filter passes it
+
+	wss := appContainer.GetWSS()
+	for _, f := range friends {
+		friendUID := f.FriendUID
+		if f.UID != uid {
+			friendUID = f.UID
+		}
+		wss.BroadcastToUser(friendUID, c, action)
+	}
+}
+
+// sendOnlineMembersToUser sends the current online vault members to the newly connected user.
+func sendOnlineMembersToUser(ctx context.Context, appContainer *app.App, newUID int64) {
+	if appContainer.VaultMemberRepo == nil || appContainer.SharedVaultRepo == nil || appContainer.GetWSS() == nil {
+		return
+	}
+
+	vaultSet := make(map[string]struct{})
+
+	memberships, err := appContainer.VaultMemberRepo.ListByMember(ctx, newUID)
+	if err == nil {
+		for _, m := range memberships {
+			vaultSet[m.VaultName] = struct{}{}
+		}
+	}
+
+	ownedShares, err := appContainer.SharedVaultRepo.ListByOwner(ctx, newUID)
+	if err == nil {
+		for _, s := range ownedShares {
+			if s.Status == domain.SharedVaultAccepted {
+				vaultSet[s.VaultName] = struct{}{}
+			}
+		}
+	}
+
+	if len(vaultSet) == 0 {
+		return
+	}
+
+	wss := appContainer.GetWSS()
+	for vaultName := range vaultSet {
+		vaultMembers, err := appContainer.VaultMemberRepo.ListByVault(ctx, vaultName)
+		if err != nil {
+			continue
+		}
+		for _, vm := range vaultMembers {
+			if vm.MemberUID == newUID || !wss.IsUserOnline(vm.MemberUID) {
+				continue
+			}
+
+			username := fmt.Sprintf("%d", vm.MemberUID)
+			if user, err := appContainer.UserRepo.GetByUID(ctx, vm.MemberUID); err == nil && user != nil {
+				if user.Username != "" {
+					username = user.Username
+				} else if user.Email != "" {
+					username = user.Email
+				}
+			}
+			payload := dto.MemberStatusMessage{
+				UID:      vm.MemberUID,
+				Nickname: username,
+				Vault:    vaultName,
+				Online:   true,
+			}
+			c := code.Success.WithData(payload).WithVault(vaultName)
+			wss.BroadcastToUser(newUID, c, websocket_router.MemberOnline)
+		}
+	}
+}
+
+// sendOnlineFriendsToUser sends the online status of all currently online friends to the newly connected user.
+func sendOnlineFriendsToUser(ctx context.Context, appContainer *app.App, newUID int64) {
+	if appContainer.FriendRelationshipRepo == nil || appContainer.GetWSS() == nil {
+		return
+	}
+
+	friends, err := appContainer.FriendRelationshipRepo.ListAcceptedByUID(ctx, newUID)
+	if err != nil || len(friends) == 0 {
+		return
+	}
+
+	wss := appContainer.GetWSS()
+	for _, f := range friends {
+		friendUID := f.FriendUID
+		if f.UID != newUID {
+			friendUID = f.UID
+		}
+		if !wss.IsUserOnline(friendUID) {
+			continue
+		}
+
+		username := fmt.Sprintf("%d", friendUID)
+		if user, err := appContainer.UserRepo.GetByUID(ctx, friendUID); err == nil && user != nil {
+			if user.Username != "" {
+				username = user.Username
+			} else if user.Email != "" {
+				username = user.Email
+			}
+		}
+		payload := dto.MemberStatusMessage{
+			UID:      friendUID,
+			Nickname: username,
+			Vault:    "",
+			Online:   true,
+		}
+		c := code.Success.WithData(payload)
+		wss.BroadcastToUser(newUID, c, websocket_router.MemberOnline)
 	}
 }

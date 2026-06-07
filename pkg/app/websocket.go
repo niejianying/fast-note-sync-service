@@ -954,6 +954,11 @@ func (w *WebsocketServer) hasUserClients(uid int64) bool {
 	return ok && len(clients) > 0
 }
 
+// IsUserOnline reports whether the given user has at least one active WebSocket connection.
+func (w *WebsocketServer) IsUserOnline(uid int64) bool {
+	return w.hasUserClients(uid)
+}
+
 func (w *WebsocketServer) triggerUserConnect(uid int64, hasExisting bool) {
 	if !hasExisting && w.onUserConnect != nil {
 		w.onUserConnect(uid)
