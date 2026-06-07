@@ -236,6 +236,9 @@ const (
 	// FriendRequestRejected notify requester that their friend request was rejected
 	// FriendRequestRejected 通知发起方好友请求被拒绝
 	FriendRequestRejected WebSocketSendAction = "FriendRequestRejected"
+	// FriendRequestAccepted notify requester that their friend request was accepted
+	// FriendRequestAccepted 通知发起方好友请求已被接受
+	FriendRequestAccepted WebSocketSendAction = "FriendRequestAccepted"
 	// ShareSyncRejected notify sharer that their vault share was rejected
 	// ShareSyncRejected 通知发起方仓库共享被拒绝
 	ShareSyncRejected WebSocketSendAction = "ShareSyncRejected"

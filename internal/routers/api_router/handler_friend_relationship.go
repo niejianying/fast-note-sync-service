@@ -95,11 +95,17 @@ func (h *FriendRelationshipHandler) RespondToRequest(c *gin.Context) {
 
 	response.ToResponse(code.Success.WithData(result))
 
-	// If rejected, notify the requester
-	if h.App.GetWSS() != nil && !params.Accept {
-		h.App.GetWSS().BroadcastToUser(params.FriendUID,
-			code.Success.WithData(map[string]int64{"uid": uid}),
-			websocket_router.FriendRequestRejected)
+	// Notify the requester via WebSocket
+	if h.App.GetWSS() != nil {
+		if params.Accept {
+			h.App.GetWSS().BroadcastToUser(params.FriendUID,
+				code.Success.WithData(map[string]int64{"uid": uid}),
+				websocket_router.FriendRequestAccepted)
+		} else {
+			h.App.GetWSS().BroadcastToUser(params.FriendUID,
+				code.Success.WithData(map[string]int64{"uid": uid}),
+				websocket_router.FriendRequestRejected)
+		}
 	}
 }
 
