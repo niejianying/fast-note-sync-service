@@ -28,6 +28,6 @@ type SharedVaultDTO struct {
 type MemberStatusMessage struct {
 	UID      int64  `json:"uid"`
 	Nickname string `json:"nickname"`
-	Vault    string `json:"vault"`
+	Vault    string `json:"vault,omitempty"`
 	Online   bool   `json:"online"`
 }
