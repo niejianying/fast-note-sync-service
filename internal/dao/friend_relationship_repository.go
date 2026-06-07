@@ -149,14 +149,16 @@ func (r *friendRelationshipRepository) ListAcceptedByUID(ctx context.Context, ui
 }
 
 func (r *friendRelationshipRepository) ListPendingByUID(ctx context.Context, uid int64) ([]*domain.FriendRelationship, error) {
-	q := r.friendQuery().FriendRelationship
-	ms, err := q.WithContext(ctx).Where(q.FriendUID.Eq(uid), q.Status.Eq("pending")).Find()
+	var ms []model.FriendRelationship
+	err := r.dao.Db.WithContext(ctx).
+		Where("(uid = ? OR friend_uid = ?) AND status = ?", uid, uid, "pending").
+		Find(&ms).Error
 	if err != nil {
 		return nil, err
 	}
 	var res []*domain.FriendRelationship
-	for _, m := range ms {
-		res = append(res, r.toDomain(m))
+	for i := range ms {
+		res = append(res, r.toDomain(&ms[i]))
 	}
 	return res, nil
 }
