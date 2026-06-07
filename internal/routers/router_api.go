@@ -49,6 +49,7 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 		tokenHandler := api_router.NewTokenHandler(appContainer)
 		friendHandler := api_router.NewFriendRelationshipHandler(appContainer)
 		vaultShareHandler := api_router.NewVaultShareHandler(appContainer)
+		inboxItemHandler := api_router.NewInboxItemHandler(appContainer)
 		vaultMemberHandler := api_router.NewVaultMemberHandler(appContainer)
 
 		// No-auth WebGUI restricted routes
@@ -243,6 +244,14 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 			auth.DELETE("/vault/share/:id", vaultShareHandler.Revoke)
 			auth.GET("/vault/shares/incoming", vaultShareHandler.ListIncoming)
 			auth.GET("/vault/shares/outgoing", vaultShareHandler.ListOutgoing)
+
+			// Inbox item routes
+			// 收件箱条目路由
+			auth.GET("/inbox/items", inboxItemHandler.ListItems)
+			auth.POST("/inbox/item", inboxItemHandler.CreateItem)
+			auth.POST("/inbox/item/:id/read", inboxItemHandler.MarkRead)
+			auth.POST("/inbox/items/read-all", inboxItemHandler.MarkAllRead)
+			auth.DELETE("/inbox/item/:id", inboxItemHandler.DeleteItem)
 
 			// Vault member routes
 			// 仓库成员管理路由

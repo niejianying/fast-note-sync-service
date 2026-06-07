@@ -27,6 +27,7 @@ type Services struct {
 	FriendRelationshipService service.FriendRelationshipService
 	VaultShareService  service.VaultShareService
 	VaultRoutingService service.VaultRoutingService
+	InboxItemService    service.InboxItemService
 }
 
 // initServices initializes all services
@@ -102,6 +103,10 @@ func initServices(cfg *AppConfig, infra *Infra, repos *Repositories, logger *zap
 		repos.FriendRelationshipRepo,
 		logger,
 		svcConfig,
+	)
+	s.InboxItemService = service.NewInboxItemService(
+		repos.InboxItemRepo,
+		logger,
 	)
 	s.VaultRoutingService = service.NewVaultRoutingService(
 		repos.VaultMemberRepo,

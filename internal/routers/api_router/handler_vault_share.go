@@ -66,6 +66,13 @@ func (h *VaultShareHandler) Share(c *gin.Context) {
 			}),
 			websocket_router.ShareSyncRefresh)
 	}
+
+	// Persist inbox item for the recipient
+	if h.App.InboxItemService != nil {
+		h.createVaultShareInboxItem(ctx, params.FriendUID,
+			"vault_share_"+strconv.FormatInt(result.ID, 10),
+			result.VaultName, uid)
+	}
 }
 
 func (h *VaultShareHandler) Respond(c *gin.Context) {
@@ -100,14 +107,31 @@ func (h *VaultShareHandler) Respond(c *gin.Context) {
 
 	response.ToResponse(code.Success.WithData(result))
 
+	if result == nil {
+		return
+	}
+
 	// If rejected, notify the owner
-	if h.App.GetWSS() != nil && result != nil && !params.Accept {
+	if h.App.GetWSS() != nil && !params.Accept {
 		h.App.GetWSS().BroadcastToUser(result.OwnerUID,
 			code.Success.WithData(map[string]interface{}{
 				"id":        result.ID,
 				"vaultName": result.VaultName,
 			}),
 			websocket_router.ShareSyncRejected)
+	}
+
+	// Persist inbox item
+	if h.App.InboxItemService != nil {
+		if params.Accept {
+			h.createVaultShareInboxItem(ctx, result.OwnerUID,
+				"vault_share_accepted_"+strconv.FormatInt(result.ID, 10),
+				result.VaultName, uid)
+		} else {
+			h.createVaultShareInboxItem(ctx, result.OwnerUID,
+				"vault_share_rejected_"+strconv.FormatInt(result.ID, 10),
+				result.VaultName, uid)
+		}
 	}
 }
 
@@ -154,6 +178,18 @@ func (h *VaultShareHandler) ListIncoming(c *gin.Context) {
 	}
 
 	response.ToResponse(code.Success.WithData(list))
+}
+
+func (h *VaultShareHandler) createVaultShareInboxItem(ctx context.Context, targetUID int64, itemID, vaultName string, fromUID int64) {
+	if h.App.InboxItemService == nil {
+		return
+	}
+	_, _ = h.App.InboxItemService.AddItem(ctx, targetUID, &dto.InboxItemCreateRequest{
+		ItemID:   itemID,
+		Type:     "vaultShare",
+		Title:    "仓库共享邀请",
+		Subtitle: "用户 #" + strconv.FormatInt(fromUID, 10) + " 邀请你共享 \"" + vaultName + "\"",
+	})
 }
 
 func (h *VaultShareHandler) ListOutgoing(c *gin.Context) {

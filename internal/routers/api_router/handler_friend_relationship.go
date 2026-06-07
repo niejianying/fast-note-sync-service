@@ -66,6 +66,12 @@ func (h *FriendRelationshipHandler) AddFriend(c *gin.Context) {
 			code.Success.WithData(map[string]int64{"uid": uid}),
 			websocket_router.FriendRequestUpdate)
 	}
+
+	// Persist inbox item for the recipient
+	h.createInboxItem(ctx, params.FriendUID,
+		"friend_req_"+strconv.FormatInt(uid, 10),
+		"friendRequest", "好友请求",
+		"用户 #"+strconv.FormatInt(uid, 10)+" 请求添加你为好友", "")
 }
 
 func (h *FriendRelationshipHandler) RespondToRequest(c *gin.Context) {
@@ -106,6 +112,19 @@ func (h *FriendRelationshipHandler) RespondToRequest(c *gin.Context) {
 				code.Success.WithData(map[string]int64{"uid": uid}),
 				websocket_router.FriendRequestRejected)
 		}
+	}
+
+	// Persist inbox item for the requester
+	if params.Accept {
+		h.createInboxItem(ctx, params.FriendUID,
+			"friend_accepted_"+strconv.FormatInt(uid, 10),
+			"friendRequest", "好友请求已接受",
+			"用户 #"+strconv.FormatInt(uid, 10)+" 接受了你的好友请求", "")
+	} else {
+		h.createInboxItem(ctx, params.FriendUID,
+			"friend_rejected_"+strconv.FormatInt(uid, 10),
+			"friendRequest", "好友请求被拒绝",
+			"用户 #"+strconv.FormatInt(uid, 10)+" 拒绝了你的好友请求", "")
 	}
 }
 
@@ -157,6 +176,19 @@ func (h *FriendRelationshipHandler) ListFriends(c *gin.Context) {
 	}
 
 	response.ToResponse(code.Success.WithData(list))
+}
+// createInboxItem persists an inbox item for the specified user.
+func (h *FriendRelationshipHandler) createInboxItem(ctx context.Context, targetUID int64, itemID, itemType, title, subtitle, payload string) {
+	if h.App.InboxItemService == nil {
+		return
+	}
+	_, _ = h.App.InboxItemService.AddItem(ctx, targetUID, &dto.InboxItemCreateRequest{
+		ItemID:   itemID,
+		Type:     itemType,
+		Title:    title,
+		Subtitle: subtitle,
+		Payload:  payload,
+	})
 }
 
 func (h *FriendRelationshipHandler) ListPendingRequests(c *gin.Context) {

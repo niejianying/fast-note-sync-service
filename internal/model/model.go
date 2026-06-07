@@ -78,6 +78,9 @@ func AutoMigrate(db *gorm.DB, key string) error {
 
 	case "Vault":
 		return db.AutoMigrate(Vault{})
+
+	case "InboxItem":
+		return db.AutoMigrate(InboxItem{})
 	}
 	return nil
 }
