@@ -82,6 +82,14 @@ func (s *friendRelationshipService) AddFriend(ctx context.Context, uid int64, pa
 			}
 			return s.domainToDTO(reverse), nil
 		}
+		if reverse.Status == domain.FriendStatusPending {
+			reverse.Status = domain.FriendStatusAccepted
+			reverse.UpdatedAt = time.Now()
+			if err := s.friendRepo.Update(ctx, reverse); err != nil {
+				return nil, code.ErrorDBQuery.WithDetails(err.Error())
+			}
+			return s.domainToDTO(reverse), nil
+		}
 		return nil, code.ErrorFriendAlreadyExists
 	}
 
