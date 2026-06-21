@@ -29,6 +29,7 @@ type LogType string
 const (
 	WSPingInterval         = 25
 	WSPingWait             = 60
+	WSPingWriteTimeout     = 10      // WritePing write timeout (seconds), must < PingInterval // WritePing 写超时（秒），需小于 PingInterval
 	LogInfo        LogType = "info"
 	LogError       LogType = "error"
 	LogWarn        LogType = "warn"
@@ -239,6 +240,12 @@ type PathHashGetter interface {
 	GetPathHash() string
 }
 
+// SessionCreatedAtGetter interface for sessions that track creation time
+// SessionCreatedAtGetter 接口，用于获取会话创建时间
+type SessionCreatedAtGetter interface {
+	GetCreatedAt() time.Time
+}
+
 // DiffMergeEntry represents an entry in DiffMergePaths
 // DiffMergeEntry 表示 DiffMergePaths 中的条目
 // Contains creation timestamp for timeout cleanup mechanism
@@ -272,14 +279,14 @@ type WebsocketClient struct {
 	DiffMergePathsMu    sync.RWMutex              // Mutex lock to prevent concurrency conflicts // 互斥锁，防止并发冲突
 	OfflineSyncStrategy string                    // Offline device sync strategy // 离线设备同步策略 "newTimeMerge" | "ignoreTimeMerge"
 	failCount           atomic.Int32              // Consecutive broadcast failure counter; connection closed when exceeding threshold // 连续广播失败计数器，超过阈值时主动关闭连接
+	lastPongAt          atomic.Int64                    // Unix timestamp of last received pong; used to detect zombie connections // 最后一次收到 pong 的 Unix 时间戳，用于检测僵尸连接
 	TokenID             int64                     // Bound Token ID // 绑定的令牌 ID
 	Scope               string                    // Token Scope // 令牌权限范围
 	Vaults              string                    // Restrict Vaults // 限制笔记库
 	Lang                string                    // Language preference // 语言偏好
 	Protocol            string                    // Protocol "protobuf" or other // 协议 "protobuf" 或其他
 	UseProtobuf         bool                      // Whether to use protobuf protocol // 是否使用 protobuf 协议
-	currentAction       string                    // Current action type being processed // 当前正在处理的动作类型
-	currentMsgIsPb      bool                      // Whether current message is in protobuf format // 当前处理的消息是否为 protobuf 格式
+	currentAction       string                    // Current action type being processed // Current action type being processed // 当前正在处理的动作类型
 }
 
 // initContext initializes the context for the WebSocket connection
@@ -373,7 +380,7 @@ func (c *WebsocketClient) BindAndValid(data []byte, obj any) (bool, ValidErrors)
 func (c *WebsocketClient) BindAndValidWithAction(action string, data []byte, obj any) (bool, ValidErrors) {
 	var errs ValidErrors
 
-	if c.UseProtobuf && c.currentMsgIsPb && c.Server.ProtobufDecoder != nil {
+	if c.UseProtobuf && c.Server.ProtobufDecoder != nil {
 		decoded, err := c.Server.ProtobufDecoder(action, data, obj)
 		if err != nil {
 			errs = append(errs, &ValidError{
@@ -461,6 +468,13 @@ func (c *WebsocketClient) PingLoop(PingInterval time.Duration) {
 	cleanupTicker := time.NewTicker(10 * time.Minute)
 	defer cleanupTicker.Stop()
 
+	// Initialize last pong time to now (connection just established)
+	// 初始化最后 pong 时间为当前（连接刚建立）
+	c.lastPongAt.Store(time.Now().Unix())
+	// Track whether we've sent a ping and are waiting for a pong
+	// 跟踪是否已发送 ping 并等待 pong
+	pingSent := false
+
 	for {
 		select {
 		case <-c.done:
@@ -470,6 +484,23 @@ func (c *WebsocketClient) PingLoop(PingInterval time.Duration) {
 			if c.conn == nil {
 				return
 			}
+			// If we sent a ping last cycle but never received a pong, the connection is likely dead.
+			// If we sent a ping last cycle but never received a pong, force close.
+			// 如果上一轮发了 ping 但没收到 pong，连接可能已死，强制关闭。
+			if pingSent {
+				lastPong := c.lastPongAt.Load()
+				elapsed := time.Since(time.Unix(lastPong, 0))
+				if elapsed > time.Duration(WSPingWait)*time.Second {
+					log(LogWarn, "WS Client: no pong received within deadline, force closing",
+						zap.Duration("sinceLastPong", elapsed),
+						zap.String("traceID", c.TraceID))
+					_ = c.conn.NetConn().Close()
+					return
+				}
+			}
+			// Set write deadline to prevent WritePing from blocking indefinitely on dead connections.
+			// 设置写超时，防止 WritePing 在死连接上永久阻塞
+			_ = c.conn.NetConn().SetWriteDeadline(time.Now().Add(WSPingWriteTimeout * time.Second))
 			if err := c.conn.WritePing(nil); err != nil {
 				// Normal error when the connection is closed, lower log level
 				// 连接关闭时的正常错误，降低日志级别
@@ -477,9 +508,18 @@ func (c *WebsocketClient) PingLoop(PingInterval time.Duration) {
 					log(LogDebug, "WS Client Ping: connection closed")
 				} else {
 					log(LogError, "WS Client Ping err ", zap.Error(err))
+					// Force close the underlying connection to trigger gws OnClose callback,
+					// release all resources (buffers, goroutines, worker pool slots).
+					// 强制关闭底层连接，触发 gws OnClose 回调，释放所有资源（缓冲区、goroutine、Worker Pool 槽位）
+					_ = c.conn.NetConn().Close()
 				}
+				pingSent = false
 				return
 			}
+			// Reset write deadline after successful ping.
+			// Ping 成功后重置写超时
+			_ = c.conn.NetConn().SetWriteDeadline(time.Time{})
+			pingSent = true
 			// log(LogInfo, "WS Client Ping", zap.String("uid", c.User.ID))
 		case <-cleanupTicker.C:
 			// Cleanup items expired for more than 1 hour
@@ -717,6 +757,7 @@ type WebsocketServer struct {
 	binaryHandlers    map[string]func(*WebsocketClient, []byte) // Binary message handler map: prefix -> handler // 二进制消息处理器映射 prefix -> handler
 	clients           ConnStorage
 	userClients       map[string]ConnStorage
+	connWg            sync.WaitGroup
 	mu                sync.RWMutex
 	up                *gws.Upgrader
 	config            *WSConfig
@@ -897,6 +938,7 @@ func (w *WebsocketServer) Run() gin.HandlerFunc {
 		client.initContext(traceID)
 
 		w.AddClient(client)
+		w.connWg.Add(1)
 		log(LogInfo, "WS Start",
 			zap.String("type", "ReadLoop"),
 			zap.String("traceID", traceID),
@@ -1068,9 +1110,9 @@ func (w *WebsocketServer) Authorization(c *WebsocketClient, msg *WebSocketMessag
 
 func (w *WebsocketServer) ClientInfo(c *WebsocketClient, msg *WebSocketMessage) {
 	var info ClientInfoMessage
-	if err := json.Unmarshal(msg.Data, &info); err != nil {
-		log(LogError, "WS ClientInfo Unmarshal FAILD", zap.Error(err))
-		c.ToResponse(code.ErrorInvalidParams.WithDetails(err.Error()))
+	if ok, errs := c.BindAndValidWithAction(msg.Type, msg.Data, &info); !ok {
+		log(LogError, "WS ClientInfo Unmarshal FAILD", zap.Error(fmt.Errorf("%s", errs.ErrorsToString())))
+		c.ToResponse(code.ErrorInvalidParams.WithDetails(errs.ErrorsToString()))
 		return
 	}
 
@@ -1255,6 +1297,44 @@ func (w *WebsocketServer) KickToken(uid int64, tokenID int64) {
 	}
 }
 
+// CloseAllConnections sends a close frame to all active WebSocket connections.
+// This must be called before shutting down the Worker Pool and Write Queue Manager
+// to ensure hijacked WebSocket connections are properly terminated.
+// 向所有活跃的 WebSocket 连接发送关闭帧。
+// 必须在关闭 Worker Pool 和 Write Queue Manager 之前调用，以确保被劫持的 WebSocket 连接被正确终止。
+func (w *WebsocketServer) CloseAllConnections() {
+	w.mu.RLock()
+	clients := make([]*WebsocketClient, 0, len(w.clients))
+	for _, c := range w.clients {
+		clients = append(clients, c)
+	}
+	w.mu.RUnlock()
+
+	for _, c := range clients {
+		if c.conn != nil {
+			_ = c.conn.WriteClose(1001, []byte("server shutting down"))
+		}
+	}
+}
+
+// WaitAllClosed waits for all WebSocket connections to be fully closed (OnClose completed).
+// Returns when all connections are closed or timeout is reached.
+// 等待所有 WebSocket 连接完全关闭（OnClose 回调执行完毕）。
+// 在所有连接关闭或超时后返回。
+func (w *WebsocketServer) WaitAllClosed(timeout time.Duration) {
+	done := make(chan struct{})
+	go func() {
+		w.connWg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(timeout):
+		log(LogWarn, "WaitAllClosed: timeout waiting for WebSocket connections to close",
+			zap.Int("remaining", len(w.clients)))
+	}
+}
+
 func (w *WebsocketServer) RemoveUserClient(c *WebsocketClient) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -1364,6 +1444,7 @@ func isNormalDisconnectError(err error) bool {
 }
 
 func (w *WebsocketServer) OnClose(conn *gws.Conn, err error) {
+	defer w.connWg.Done()
 
 	c := w.GetClient(conn)
 	if c == nil {
@@ -1401,8 +1482,13 @@ func (w *WebsocketServer) OnClose(conn *gws.Conn, err error) {
 
 	// No longer clean up BinaryChunkSessions in OnClose, rely on the timeout mechanism for automatic cleanup instead
 	// 不再在 OnClose 中清理 BinaryChunkSessions，改为依赖超时机制自动清理
-	// This way, when a network fluctuation causes reconnection during a large file upload, the existing session can continue to be used
-	// 这样可以支持在大文件上传过程中网络波动导致重连时，继续使用原有会话
+	// However, clean up stale sessions (older than 10 minutes) to prevent memory leaks from zombie connections.
+	// 但是清理超过 10 分钟的过期会话，防止僵尸连接导致内存泄漏。
+	// Recent sessions are kept to support reconnection during network fluctuations.
+	// 保留近期会话以支持网络波动期间的重连。
+	if c.User != nil {
+		w.cleanupStaleSessions(c.User.ID, 10*time.Minute)
+	}
 
 	// Clean up all DiffMergePaths entries
 	// 清理所有 DiffMergePaths 条目
@@ -1423,6 +1509,9 @@ func (w *WebsocketServer) OnPing(socket *gws.Conn, payload []byte) {
 
 func (w *WebsocketServer) OnPong(socket *gws.Conn, payload []byte) {
 	_ = socket.SetDeadline(time.Now().Add(w.config.PingWait * time.Second))
+	if c := w.GetClient(socket); c != nil {
+		c.lastPongAt.Store(time.Now().Unix())
+	}
 }
 
 func (w *WebsocketServer) OnMessage(conn *gws.Conn, message *gws.Message) {
@@ -1497,12 +1586,6 @@ func (w *WebsocketServer) OnMessage(conn *gws.Conn, message *gws.Message) {
 				log(LogError, "WS OnMessage EnvelopeDecoder is nil", zap.String("uid", c.User.ID))
 				return
 			}
-
-			// Mark current message as Protobuf format for BindAndValid
-			c.currentMsgIsPb = true
-			defer func() {
-				c.currentMsgIsPb = false
-			}()
 
 			action, innerPayload, err := w.EnvelopeDecoder(payloadCopy)
 			if err != nil {
@@ -1639,3 +1722,42 @@ func (w *WebsocketServer) BroadcastToUser(uid int64, code *code.Code, action str
 		}
 	}
 }
+
+// cleanupStaleSessions removes BinaryChunkSessions older than maxAge for a given user.
+// This prevents memory leaks from zombie connections whose timeout goroutines never fired.
+// cleanupStaleSessions 清理指定用户超过 maxAge 的 BinaryChunkSessions。
+// 防止僵尸连接的超时 goroutine 未触发时导致的内存泄漏。
+func (w *WebsocketServer) cleanupStaleSessions(uid string, maxAge time.Duration) {
+	w.sessionsMu.Lock()
+	defer w.sessionsMu.Unlock()
+
+	userSessions, ok := w.binaryChunkSessions[uid]
+	if !ok {
+		return
+	}
+
+	var staleIDs []string
+	for sessionID, session := range userSessions {
+		if getter, ok := session.(SessionCreatedAtGetter); ok {
+			if time.Since(getter.GetCreatedAt()) > maxAge {
+				staleIDs = append(staleIDs, sessionID)
+			}
+		}
+	}
+
+	for _, sessionID := range staleIDs {
+		session := userSessions[sessionID]
+		delete(userSessions, sessionID)
+		if cleaner, ok := session.(SessionCleaner); ok {
+			go cleaner.Cleanup()
+		}
+		log(LogInfo, "cleanupStaleSessions: removed stale session",
+			zap.String("uid", uid),
+			zap.String("sessionID", sessionID))
+	}
+
+	if len(userSessions) == 0 {
+		delete(w.binaryChunkSessions, uid)
+	}
+}
+

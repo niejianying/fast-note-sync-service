@@ -3,6 +3,8 @@ package api_router
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -135,13 +137,40 @@ func (h *AdminControlHandler) GetConfig(c *gin.Context) {
 		HistoryKeepVersions:     &cfg.App.HistoryKeepVersions,
 		HistorySaveDelay:        &cfg.App.HistorySaveDelay,
 		// DefaultAPIFolder:        &cfg.App.DefaultAPIFolder,
-		AdminUID:         &cfg.User.AdminUID,
-		AuthTokenKey:     &cfg.Security.AuthTokenKey,
-		TokenExpiry:      &cfg.Security.TokenExpiry,
-		ShareTokenKey:    &cfg.Security.ShareTokenKey,
-		ShareTokenExpiry: &cfg.Security.ShareTokenExpiry,
-		PullSource:       &cfg.App.PullSource,
-		PullReleaseChannel: &cfg.App.PullReleaseChannel,
+		AdminUID:                      &cfg.User.AdminUID,
+		AuthTokenKey:                  &cfg.Security.AuthTokenKey,
+		TokenExpiry:                   &cfg.Security.TokenExpiry,
+		ShareTokenKey:                 &cfg.Security.ShareTokenKey,
+		ShareTokenExpiry:              &cfg.Security.ShareTokenExpiry,
+		PullSource:                    &cfg.App.PullSource,
+		PullReleaseChannel:            &cfg.App.PullReleaseChannel,
+		WebGUILoginTokenExpiry:        &cfg.Security.WebGUILoginTokenExpiry,
+		WebGUILoginTokenBindIP:        cfg.Security.WebGUILoginTokenBindIP,
+		CustomResponseHeaders:         &cfg.Server.CustomResponseHeaders,
+		DefaultPageSize:               &cfg.App.DefaultPageSize,
+		MaxPageSize:                   &cfg.App.MaxPageSize,
+		DefaultContextTimeout:         &cfg.App.DefaultContextTimeout,
+		TempPath:                      &cfg.App.TempPath,
+		IsReturnSussess:               &cfg.App.IsReturnSussess,
+		SyncLogRetentionTime:          &cfg.App.SyncLogRetentionTime,
+		DownloadSessionTimeout:        &cfg.App.DownloadSessionTimeout,
+		WorkerPoolMaxWorkers:          &cfg.App.WorkerPoolMaxWorkers,
+		WorkerPoolQueueSize:           &cfg.App.WorkerPoolQueueSize,
+		WriteQueueCapacity:            &cfg.App.WriteQueueCapacity,
+		WriteQueueTimeout:             &cfg.App.WriteQueueTimeout,
+		WriteQueueIdleTime:            &cfg.App.WriteQueueIdleTime,
+		WebSocketReadMaxPayloadSize:   &cfg.App.WebSocketReadMaxPayloadSize,
+		WebSocketWriteMaxPayloadSize:  &cfg.App.WebSocketWriteMaxPayloadSize,
+		WebSocketParallelEnabled:      cfg.App.WebSocketParallelEnabled,
+		WebSocketParallelGolimit:      &cfg.App.WebSocketParallelGolimit,
+		WebSocketCheckUtf8Enabled:     cfg.App.WebSocketCheckUtf8Enabled,
+		WebSocketCompressionEnabled:   cfg.App.WebSocketCompressionEnabled,
+		WebSocketCompressionLevel:     &cfg.App.WebSocketCompressionLevel,
+		WebSocketCompressionThreshold: &cfg.App.WebSocketCompressionThreshold,
+		FtsBleveEnabled:               cfg.App.FtsBleveEnabled,
+		FtsBleveStoreRaw:              cfg.App.FtsBleveStoreRaw,
+		GitName:                       &cfg.Git.Name,
+		GitEmail:                      &cfg.Git.Email,
 	}
 
 	response.ToResponse(code.Success.WithData(data))
@@ -213,6 +242,58 @@ func (h *AdminControlHandler) UpdateConfig(c *gin.Context) {
 		}
 	}
 
+	// Validate webguiLoginTokenExpiry format
+	// 验证 webguiLoginTokenExpiry 格式
+	if params.WebGUILoginTokenExpiry != nil && *params.WebGUILoginTokenExpiry != "" {
+		_, err := util.ParseDuration(*params.WebGUILoginTokenExpiry)
+		if err != nil {
+			logger.Warn("apiRouter.WebGUI.UpdateConfig invalid webguiLoginTokenExpiry format",
+				zap.String("value", *params.WebGUILoginTokenExpiry))
+			response.ToResponse(code.ErrorInvalidParams.WithDetails("webguiLoginTokenExpiry format invalid, e.g. 7d, 24h, 30m"))
+			return
+		}
+	}
+
+	if params.SyncLogRetentionTime != nil && *params.SyncLogRetentionTime != "" {
+		_, err := util.ParseDuration(*params.SyncLogRetentionTime)
+		if err != nil {
+			logger.Warn("apiRouter.WebGUI.UpdateConfig invalid syncLogRetentionTime format",
+				zap.String("value", *params.SyncLogRetentionTime))
+			response.ToResponse(code.ErrorInvalidParams.WithDetails("syncLogRetentionTime format invalid, e.g. 30d, 7d"))
+			return
+		}
+	}
+
+	if params.DownloadSessionTimeout != nil && *params.DownloadSessionTimeout != "" {
+		_, err := util.ParseDuration(*params.DownloadSessionTimeout)
+		if err != nil {
+			logger.Warn("apiRouter.WebGUI.UpdateConfig invalid downloadSessionTimeout format",
+				zap.String("value", *params.DownloadSessionTimeout))
+			response.ToResponse(code.ErrorInvalidParams.WithDetails("downloadSessionTimeout format invalid, e.g. 1h, 30m"))
+			return
+		}
+	}
+
+	if params.WriteQueueTimeout != nil && *params.WriteQueueTimeout != "" {
+		_, err := util.ParseDuration(*params.WriteQueueTimeout)
+		if err != nil {
+			logger.Warn("apiRouter.WebGUI.UpdateConfig invalid writeQueueTimeout format",
+				zap.String("value", *params.WriteQueueTimeout))
+			response.ToResponse(code.ErrorInvalidParams.WithDetails("writeQueueTimeout format invalid, e.g. 30s, 1m"))
+			return
+		}
+	}
+
+	if params.WriteQueueIdleTime != nil && *params.WriteQueueIdleTime != "" {
+		_, err := util.ParseDuration(*params.WriteQueueIdleTime)
+		if err != nil {
+			logger.Warn("apiRouter.WebGUI.UpdateConfig invalid writeQueueIdleTime format",
+				zap.String("value", *params.WriteQueueIdleTime))
+			response.ToResponse(code.ErrorInvalidParams.WithDetails("writeQueueIdleTime format invalid, e.g. 10m, 1h"))
+			return
+		}
+	}
+
 	// Update configuration
 	// 更新配置
 	if params.FontSet != nil {
@@ -256,6 +337,87 @@ func (h *AdminControlHandler) UpdateConfig(c *gin.Context) {
 	}
 	if params.PullReleaseChannel != nil {
 		cfg.App.PullReleaseChannel = *params.PullReleaseChannel
+	}
+	if params.WebGUILoginTokenExpiry != nil {
+		cfg.Security.WebGUILoginTokenExpiry = *params.WebGUILoginTokenExpiry
+	}
+	if params.WebGUILoginTokenBindIP != nil {
+		cfg.Security.WebGUILoginTokenBindIP = params.WebGUILoginTokenBindIP
+	}
+	if params.CustomResponseHeaders != nil {
+		cfg.Server.CustomResponseHeaders = *params.CustomResponseHeaders
+	}
+	if params.DefaultPageSize != nil {
+		cfg.App.DefaultPageSize = *params.DefaultPageSize
+	}
+	if params.MaxPageSize != nil {
+		cfg.App.MaxPageSize = *params.MaxPageSize
+	}
+	if params.DefaultContextTimeout != nil {
+		cfg.App.DefaultContextTimeout = *params.DefaultContextTimeout
+	}
+	if params.TempPath != nil {
+		cfg.App.TempPath = *params.TempPath
+	}
+	if params.IsReturnSussess != nil {
+		cfg.App.IsReturnSussess = *params.IsReturnSussess
+	}
+	if params.SyncLogRetentionTime != nil {
+		cfg.App.SyncLogRetentionTime = *params.SyncLogRetentionTime
+	}
+	if params.DownloadSessionTimeout != nil {
+		cfg.App.DownloadSessionTimeout = *params.DownloadSessionTimeout
+	}
+	if params.WorkerPoolMaxWorkers != nil {
+		cfg.App.WorkerPoolMaxWorkers = *params.WorkerPoolMaxWorkers
+	}
+	if params.WorkerPoolQueueSize != nil {
+		cfg.App.WorkerPoolQueueSize = *params.WorkerPoolQueueSize
+	}
+	if params.WriteQueueCapacity != nil {
+		cfg.App.WriteQueueCapacity = *params.WriteQueueCapacity
+	}
+	if params.WriteQueueTimeout != nil {
+		cfg.App.WriteQueueTimeout = *params.WriteQueueTimeout
+	}
+	if params.WriteQueueIdleTime != nil {
+		cfg.App.WriteQueueIdleTime = *params.WriteQueueIdleTime
+	}
+	if params.WebSocketReadMaxPayloadSize != nil {
+		cfg.App.WebSocketReadMaxPayloadSize = *params.WebSocketReadMaxPayloadSize
+	}
+	if params.WebSocketWriteMaxPayloadSize != nil {
+		cfg.App.WebSocketWriteMaxPayloadSize = *params.WebSocketWriteMaxPayloadSize
+	}
+	if params.WebSocketParallelEnabled != nil {
+		cfg.App.WebSocketParallelEnabled = params.WebSocketParallelEnabled
+	}
+	if params.WebSocketParallelGolimit != nil {
+		cfg.App.WebSocketParallelGolimit = *params.WebSocketParallelGolimit
+	}
+	if params.WebSocketCheckUtf8Enabled != nil {
+		cfg.App.WebSocketCheckUtf8Enabled = params.WebSocketCheckUtf8Enabled
+	}
+	if params.WebSocketCompressionEnabled != nil {
+		cfg.App.WebSocketCompressionEnabled = params.WebSocketCompressionEnabled
+	}
+	if params.WebSocketCompressionLevel != nil {
+		cfg.App.WebSocketCompressionLevel = *params.WebSocketCompressionLevel
+	}
+	if params.WebSocketCompressionThreshold != nil {
+		cfg.App.WebSocketCompressionThreshold = *params.WebSocketCompressionThreshold
+	}
+	if params.FtsBleveEnabled != nil {
+		cfg.App.FtsBleveEnabled = params.FtsBleveEnabled
+	}
+	if params.FtsBleveStoreRaw != nil {
+		cfg.App.FtsBleveStoreRaw = params.FtsBleveStoreRaw
+	}
+	if params.GitName != nil {
+		cfg.Git.Name = *params.GitName
+	}
+	if params.GitEmail != nil {
+		cfg.Git.Email = *params.GitEmail
 	}
 
 	// Save configuration to file
@@ -518,91 +680,7 @@ func (h *AdminControlHandler) ValidateUserDatabaseConfig(c *gin.Context) {
 	response.ToResponse(code.Success.WithDetails("Database connection and permission verification successful"))
 }
 
-// GetNgrokConfig retrieves Ngrok tunnel configuration (requires admin privileges)
-// @Summary Get Ngrok config
-// @Description Get Ngrok tunnel configuration, requires admin privileges
-// @Tags Config
-// @Security UserAuthToken
-// @Param token header string true "Auth Token"
-// @Produce json
-// @Success 200 {object} pkgapp.Res{data=dto.AdminNgrokConfig} "Success"
-// @Failure 403 {object} pkgapp.Res "Insufficient privileges"
-// @Router /api/admin/config/ngrok [get]
-func (h *AdminControlHandler) GetNgrokConfig(c *gin.Context) {
-	response := pkgapp.NewResponse(c)
-	cfg := h.App.Config()
-	logger := h.App.Logger()
 
-	uid := pkgapp.GetUID(c)
-	if uid == 0 {
-		logger.Error("apiRouter.AdminControl.GetNgrokConfig err uid=0")
-		response.ToResponse(code.ErrorInvalidUserAuthToken)
-		return
-	}
-
-	if cfg.User.AdminUID != 0 && uid != int64(cfg.User.AdminUID) {
-		response.ToResponse(code.ErrorUserIsNotAdmin)
-		return
-	}
-
-	data := &dto.AdminNgrokConfig{
-		Enabled:   cfg.Ngrok.Enabled,
-		AuthToken: cfg.Ngrok.AuthToken,
-		Domain:    cfg.Ngrok.Domain,
-	}
-
-	response.ToResponse(code.Success.WithData(data))
-}
-
-// UpdateNgrokConfig updates Ngrok tunnel configuration (requires admin privileges)
-// @Summary Update Ngrok config
-// @Description Modify Ngrok tunnel configuration, requires admin privileges
-// @Tags Config
-// @Security UserAuthToken
-// @Param token header string true "Auth Token"
-// @Accept json
-// @Produce json
-// @Param params body dto.AdminNgrokConfig true "Config Parameters"
-// @Success 200 {object} pkgapp.Res{data=dto.AdminNgrokConfig} "Success"
-// @Failure 403 {object} pkgapp.Res "Insufficient privileges"
-// @Router /api/admin/config/ngrok [post]
-func (h *AdminControlHandler) UpdateNgrokConfig(c *gin.Context) {
-	params := &dto.AdminNgrokConfig{}
-	response := pkgapp.NewResponse(c)
-	cfg := h.App.Config()
-	logger := h.App.Logger()
-
-	valid, errs := pkgapp.BindAndValid(c, params)
-	if !valid {
-		logger.Error("apiRouter.AdminControl.UpdateNgrokConfig.BindAndValid err", zap.Error(errs))
-		response.ToResponse(code.ErrorInvalidParams.WithDetails(errs.ErrorsToString()).WithData(errs.MapsToString()))
-		return
-	}
-
-	uid := pkgapp.GetUID(c)
-	if uid == 0 {
-		logger.Error("apiRouter.AdminControl.UpdateNgrokConfig err uid=0")
-		response.ToResponse(code.ErrorInvalidUserAuthToken)
-		return
-	}
-
-	if cfg.User.AdminUID != 0 && uid != int64(cfg.User.AdminUID) {
-		response.ToResponse(code.ErrorUserIsNotAdmin)
-		return
-	}
-
-	cfg.Ngrok.Enabled = params.Enabled
-	cfg.Ngrok.AuthToken = params.AuthToken
-	cfg.Ngrok.Domain = params.Domain
-
-	if err := cfg.Save(); err != nil {
-		logger.Error("apiRouter.AdminControl.UpdateNgrokConfig.Save err", zap.Error(err))
-		response.ToResponse(code.ErrorConfigSaveFailed)
-		return
-	}
-
-	response.ToResponse(code.Success.WithData(params))
-}
 
 // GetCloudflareConfig retrieves Cloudflare tunnel configuration (requires admin privileges)
 // @Summary Get Cloudflare config
@@ -677,6 +755,12 @@ func (h *AdminControlHandler) UpdateCloudflareConfig(c *gin.Context) {
 		return
 	}
 
+	if params.Enabled && !h.App.CloudflareService.IsBinaryExist() {
+		logger.Error("apiRouter.AdminControl.UpdateCloudflareConfig err: cloudflared binary not found")
+		response.ToResponse(code.ErrorCloudflaredBinaryNotFound)
+		return
+	}
+
 	cfg.Cloudflare.Enabled = params.Enabled
 	cfg.Cloudflare.Token = params.Token
 	cfg.Cloudflare.LogEnabled = params.LogEnabled
@@ -688,6 +772,162 @@ func (h *AdminControlHandler) UpdateCloudflareConfig(c *gin.Context) {
 	}
 
 	response.ToResponse(code.Success.WithData(params))
+}
+
+// CreateUser create a new user (requires admin privileges)
+// @Summary Create a new user
+// @Description Create a new user, requires admin privileges
+// @Tags Config
+// @Security UserAuthToken
+// @Param token header string true "Auth Token"
+// @Accept json
+// @Produce json
+// @Param params body dto.UserCreateRequest true "Config Parameters"
+// @Success 200 {object} pkgapp.Res{data=dto.UserDTO} "Success"
+// @Failure 403 {object} pkgapp.Res "Insufficient privileges"
+// @Router /api/admin/users/create [post]
+func (h *AdminControlHandler) CreateUser(c *gin.Context) {
+	cfg := h.App.Config()
+	logger := h.App.Logger()
+	response := pkgapp.NewResponse(c)
+	params := &dto.UserCreateRequest{}
+
+	uid := pkgapp.GetUID(c)
+	if uid == 0 {
+		logger.Error("apiRouter.AdminControl.CreateUser err uid=0")
+		response.ToResponse(code.ErrorInvalidUserAuthToken)
+		return
+	}
+
+	if cfg.User.AdminUID != 0 && uid != int64(cfg.User.AdminUID) {
+		response.ToResponse(code.ErrorUserIsNotAdmin)
+		return
+	}
+
+	// Parameter binding and validation
+	valid, errs := pkgapp.BindAndValid(c, params)
+	if !valid {
+		h.App.Logger().Error("apiRouter.AdminControl.CreateUser.BindAndValid errs", zap.Error(errs))
+		response.ToResponse(code.ErrorInvalidParams.WithDetails(errs.ErrorsToString()).WithData(errs.MapsToString()))
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Call UserService to perform create user
+	userDTO, err := h.App.UserService.Create(ctx, params)
+	if err != nil {
+		logger.Error("apiRouter.AdminControl.CreateUser.Create err", zap.Error(err))
+		var codeErr *code.Code
+		if errors.As(err, &codeErr) {
+			response.ToResponse(codeErr)
+		} else {
+			response.ToResponse(code.ErrorUserRegister.WithDetails(err.Error()))
+		}
+		return
+	}
+
+	response.ToResponse(code.Success.WithData(userDTO))
+}
+
+// UpdateUser update a user (requires admin privileges)
+// @Summary Update a user
+// @Description Update a user, requires admin privileges
+// @Tags Config
+// @Security UserAuthToken
+// @Param token header string true "Auth Token"
+// @Accept json
+// @Produce json
+// @Param params body dto.UserUpdateRequest true "Config Parameters"
+// @Success 200 {object} pkgapp.Res{data=dto.UserDTO} "Success"
+// @Failure 403 {object} pkgapp.Res "Insufficient privileges"
+// @Router /api/admin/users/update [post]
+func (h *AdminControlHandler) UpdateUser(c *gin.Context) {
+	cfg := h.App.Config()
+	logger := h.App.Logger()
+	response := pkgapp.NewResponse(c)
+	params := &dto.UserUpdateRequest{}
+
+	uid := pkgapp.GetUID(c)
+	if uid == 0 {
+		logger.Error("apiRouter.AdminControl.UpdateUser err uid=0")
+		response.ToResponse(code.ErrorInvalidUserAuthToken)
+		return
+	}
+
+	if cfg.User.AdminUID != 0 && uid != int64(cfg.User.AdminUID) {
+		response.ToResponse(code.ErrorUserIsNotAdmin)
+		return
+	}
+
+	// Parameter binding and validation
+	valid, errs := pkgapp.BindAndValid(c, params)
+
+	if !valid {
+		h.App.Logger().Error("apiRouter.AdminControl.UpdateUser.BindAndValid errs", zap.Error(errs))
+		response.ToResponse(code.ErrorInvalidParams.WithDetails(errs.ErrorsToString()).WithData(errs.MapsToString()))
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Call UserService to perform update user
+	err := h.App.UserService.Update(ctx, params)
+	if err != nil {
+		logger.Error("apiRouter.AdminControl.UpdateUser.Update err", zap.Error(err))
+		var codeErr *code.Code
+		if errors.As(err, &codeErr) {
+			response.ToResponse(codeErr)
+		} else {
+			response.ToResponse(code.ErrorUserUpdate.WithDetails(err.Error()))
+		}
+		return
+	}
+
+	response.ToResponse(code.SuccessUpdate)
+}
+
+// GetUsers retrieves all users info
+// @Summary Get all users
+// @Description Handle request to get all users.
+// @Tags Config
+// @Security UserAuthToken
+// @Param token header string true "Auth Token"
+// @Produce json
+// @Success 200 {object} pkgapp.Res{data=[]dto.UserDTO} "Success"
+// @Failure 401 {object} pkgapp.Res "Unauthorized"
+// @Router /api/admin/users/list [get]
+func (h *AdminControlHandler) GetUsers(c *gin.Context) {
+	response := pkgapp.NewResponse(c)
+	cfg := h.App.Config()
+	logger := h.App.Logger()
+
+	uid := pkgapp.GetUID(c)
+	if uid == 0 {
+		logger.Error("apiRouter.AdminControl.GetUsers err uid=0")
+		response.ToResponse(code.ErrorInvalidUserAuthToken)
+		return
+	}
+
+	if cfg.User.AdminUID != 0 && uid != int64(cfg.User.AdminUID) {
+		response.ToResponse(code.ErrorUserIsNotAdmin)
+		return
+	}
+
+	// Get request context
+	// 获取请求上下文
+	ctx := c.Request.Context()
+	pager := pkgapp.NewPager(c)
+
+	// Call UserService to get users with pagination // 调用 UserService 分页查询用户列表
+	userDTO, total, err := h.App.UserService.GetList(ctx, pager)
+	if err != nil {
+		logger.Error("apiRouter.AdminControl.GetUsers.GetList err", zap.Error(err))
+		response.ToResponse(code.ErrorUserNotFound)
+		return
+	}
+
+	response.ToResponseList(code.Success, userDTO, int(total))
 }
 
 // GetSystemInfo retrieves system monitoring information (requires admin privileges)
@@ -926,8 +1166,8 @@ func (h *AdminControlHandler) Upgrade(c *gin.Context) {
 	h.App.Logger().Info("Starting upgrade download", zap.String("url", downloadURL), zap.String("version", versionRaw))
 
 	// Prepare temp directory
-	// 使用 storage/temp/upgrade 作为临时目录
-	tempDir := filepath.Join("storage", "temp", "upgrade")
+	// 使用配置中的 TempPath 作为临时目录
+	tempDir := filepath.Join(cfg.App.TempPath, "upgrade")
 	_ = os.RemoveAll(tempDir)
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
 		response.ToResponse(code.Failed.WithDetails("Failed to create temp directory: " + err.Error()))
@@ -936,7 +1176,11 @@ func (h *AdminControlHandler) Upgrade(c *gin.Context) {
 
 	// Download
 	tarPath := filepath.Join(tempDir, fileName)
-	if err := h.downloadFile(downloadURL, tarPath); err != nil {
+	if err := h.downloadFile(c.Request.Context(), downloadURL, tarPath); err != nil {
+		h.App.Logger().Error("Upgrade download failed",
+			zap.String("url", downloadURL),
+			zap.Error(err),
+		)
 		response.ToResponse(code.Failed.WithDetails("Download failed: " + err.Error()))
 		return
 	}
@@ -949,6 +1193,7 @@ func (h *AdminControlHandler) Upgrade(c *gin.Context) {
 	extractedBinaryPath := filepath.Join(tempDir, binaryName)
 
 	if err := h.extractBinary(tarPath, tempDir, binaryName); err != nil {
+		h.App.Logger().Error("Upgrade extract failed", zap.Error(err))
 		response.ToResponse(code.Failed.WithDetails("Extract failed: " + err.Error()))
 		return
 	}
@@ -1113,10 +1358,24 @@ func (h *AdminControlHandler) KickWSClient(c *gin.Context) {
 	response.ToResponse(code.Success.WithDetails("Client kicked successfully"))
 }
 
-func (h *AdminControlHandler) downloadFile(url string, dest string) error {
-	resp, err := http.Get(url)
+func (h *AdminControlHandler) downloadFile(ctx context.Context, url string, dest string) error {
+	client := &http.Client{
+		Timeout: 3 * time.Minute,
+		Transport: &http.Transport{
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 60 * time.Second,
+        	IdleConnTimeout:       90 * time.Second,
+		},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("create request failed: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("download request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -1126,12 +1385,16 @@ func (h *AdminControlHandler) downloadFile(url string, dest string) error {
 
 	out, err := os.Create(dest)
 	if err != nil {
-		return err
+		return fmt.Errorf("create file failed: %w", err)
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
-	return err
+	if err != nil {
+		return fmt.Errorf("save file failed: %w", err)
+	}
+
+	return nil
 }
 
 func (h *AdminControlHandler) extractBinary(tarPath string, destDir string, binaryName string) error {

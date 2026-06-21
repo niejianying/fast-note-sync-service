@@ -313,120 +313,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/admin/config/ngrok": {
-            "get": {
-                "security": [
-                    {
-                        "UserAuthToken": []
-                    }
-                ],
-                "description": "Get Ngrok tunnel configuration, requires admin privileges",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Config"
-                ],
-                "summary": "Get Ngrok config",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Auth Token",
-                        "name": "token",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Success",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/app.Res"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/dto.AdminNgrokConfig"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "403": {
-                        "description": "Insufficient privileges",
-                        "schema": {
-                            "$ref": "#/definitions/app.Res"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "UserAuthToken": []
-                    }
-                ],
-                "description": "Modify Ngrok tunnel configuration, requires admin privileges",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Config"
-                ],
-                "summary": "Update Ngrok config",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Auth Token",
-                        "name": "token",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Config Parameters",
-                        "name": "params",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.AdminNgrokConfig"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Success",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/app.Res"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/dto.AdminNgrokConfig"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "403": {
-                        "description": "Insufficient privileges",
-                        "schema": {
-                            "$ref": "#/definitions/app.Res"
-                        }
-                    }
-                }
-            }
-        },
         "/api/admin/config/user_database": {
             "get": {
                 "security": [
@@ -720,6 +606,236 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/admin/users/create": {
+            "post": {
+                "security": [
+                    {
+                        "UserAuthToken": []
+                    }
+                ],
+                "description": "Create a new user, requires admin privileges",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Config"
+                ],
+                "summary": "Create a new user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Config Parameters",
+                        "name": "params",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UserCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/app.Res"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UserDTO"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient privileges",
+                        "schema": {
+                            "$ref": "#/definitions/app.Res"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/users/list": {
+            "get": {
+                "security": [
+                    {
+                        "UserAuthToken": []
+                    }
+                ],
+                "description": "Handle request to get all users.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Config"
+                ],
+                "summary": "Get all users",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/app.Res"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.UserDTO"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/app.Res"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/users/update": {
+            "post": {
+                "security": [
+                    {
+                        "UserAuthToken": []
+                    }
+                ],
+                "description": "Update a user, requires admin privileges",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Config"
+                ],
+                "summary": "Update a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Config Parameters",
+                        "name": "params",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UserUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/app.Res"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UserDTO"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient privileges",
+                        "schema": {
+                            "$ref": "#/definitions/app.Res"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/ws_client/{traceId}": {
+            "delete": {
+                "security": [
+                    {
+                        "UserAuthToken": []
+                    }
+                ],
+                "description": "Kick a WebSocket client by TraceID, requires admin privileges",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Kick a WebSocket client",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Trace ID of the client",
+                        "name": "traceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "$ref": "#/definitions/app.Res"
+                        }
+                    },
+                    "403": {
+                        "description": "Insufficient privileges",
+                        "schema": {
+                            "$ref": "#/definitions/app.Res"
+                        }
+                    }
+                }
+            }
+        },
         "/api/admin/ws_clients": {
             "get": {
                 "security": [
@@ -768,6 +884,37 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Insufficient privileges",
+                        "schema": {
+                            "$ref": "#/definitions/app.Res"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "UserAuthToken": []
+                    }
+                ],
+                "description": "Handle user logout HTTP request, revoke current auth token.\n处理用户退出登录 HTTP 请求，注销当前认证 Token。",
+                "tags": [
+                    "User"
+                ],
+                "summary": "User logout",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
                         "schema": {
                             "$ref": "#/definitions/app.Res"
                         }
@@ -5363,6 +5510,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/vault/force-delete-item": {
+            "post": {
+                "security": [
+                    {
+                        "UserAuthToken": []
+                    }
+                ],
+                "description": "Permanently delete a single note or file (attachment) in a vault",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Vault"
+                ],
+                "summary": "Force delete a single item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Delete Parameters",
+                        "name": "params",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.VaultForceDeleteItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "$ref": "#/definitions/app.Res"
+                        }
+                    }
+                }
+            }
+        },
         "/api/vault/get": {
             "get": {
                 "security": [
@@ -5412,6 +5605,52 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/vault/rebuild-index": {
+            "post": {
+                "security": [
+                    {
+                        "UserAuthToken": []
+                    }
+                ],
+                "description": "Rebuild full-text search index from physical database and files for a specific vault, restricted to webgui client",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Vault"
+                ],
+                "summary": "Rebuild vault FTS index",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Rebuild Index Parameters",
+                        "name": "params",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.VaultRebuildIndexRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "$ref": "#/definitions/app.Res"
                         }
                     }
                 }
@@ -5504,6 +5743,19 @@ const docTemplate = `{
                 }
             }
         },
+        "app.HistoricalVersion": {
+            "type": "object",
+            "properties": {
+                "changelogContent": {
+                    "description": "Changelog content // 更新日志内容",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "Version name // 版本号",
+                    "type": "string"
+                }
+            }
+        },
         "app.ListRes": {
             "type": "object",
             "properties": {
@@ -5579,6 +5831,9 @@ const docTemplate = `{
                 },
                 "startTime": {
                     "type": "string"
+                },
+                "tokenId": {
+                    "type": "integer"
                 },
                 "traceId": {
                     "type": "string"
@@ -5682,8 +5937,27 @@ const docTemplate = `{
                     "description": "Auth token key // 认证 Token 密钥",
                     "type": "string"
                 },
+                "customResponseHeaders": {
+                    "description": "Custom HTTP response headers // 自定义 HTTP 响应头",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
                 "defaultApiFolder": {
                     "description": "Default API folder // 默认 API 目录",
+                    "type": "string"
+                },
+                "defaultContextTimeout": {
+                    "description": "Default context timeout // 默认上下文超时",
+                    "type": "integer"
+                },
+                "defaultPageSize": {
+                    "description": "Default page size // 默认每页显示数",
+                    "type": "integer"
+                },
+                "downloadSessionTimeout": {
+                    "description": "Download session timeout // 下载分片超时",
                     "type": "string"
                 },
                 "fileChunkSize": {
@@ -5694,12 +5968,40 @@ const docTemplate = `{
                     "description": "Font set // 字体设置",
                     "type": "string"
                 },
+                "ftsBleveEnabled": {
+                    "description": "Whether Bleve FTS is enabled // 是否启用 Bleve 全文搜索",
+                    "type": "boolean"
+                },
+                "ftsBleveStoreRaw": {
+                    "description": "Whether Bleve stores raw content // Bleve 全文搜索是否存储原始文本",
+                    "type": "boolean"
+                },
+                "gitEmail": {
+                    "description": "Git author email // Git 提交的作者邮箱",
+                    "type": "string"
+                },
+                "gitName": {
+                    "description": "Git author name // Git 提交的作者名称",
+                    "type": "string"
+                },
                 "historyKeepVersions": {
                     "description": "History versions to keep // 历史版本保留数",
                     "type": "integer"
                 },
                 "historySaveDelay": {
                     "description": "History save delay // 历史保存延迟",
+                    "type": "string"
+                },
+                "isReturnSussess": {
+                    "description": "Whether to return success detail // 是否返回成功详情",
+                    "type": "boolean"
+                },
+                "maxPageSize": {
+                    "description": "Max page size // 最大每页显示限制",
+                    "type": "integer"
+                },
+                "pullReleaseChannel": {
+                    "description": "Update version channel: stable | beta // 更新版本通道：stable | beta",
                     "type": "string"
                 },
                 "pullSource": {
@@ -5722,12 +6024,80 @@ const docTemplate = `{
                     "description": "Soft delete retention time // 软删除保留时间",
                     "type": "string"
                 },
+                "syncLogRetentionTime": {
+                    "description": "Sync log retention time // 同步日志保留时长",
+                    "type": "string"
+                },
+                "tempPath": {
+                    "description": "Temporary file path // 临时文件路径",
+                    "type": "string"
+                },
                 "tokenExpiry": {
                     "description": "Token expiry // Token 有效期",
                     "type": "string"
                 },
                 "uploadSessionTimeout": {
                     "description": "Upload session timeout // 上传会话超时时间",
+                    "type": "string"
+                },
+                "webguiLoginTokenBindIp": {
+                    "description": "WebGUI login token bind IP // WebGUI 登录 Token 是否绑定 IP",
+                    "type": "boolean"
+                },
+                "webguiLoginTokenExpiry": {
+                    "description": "WebGUI login token expiry // WebGUI 登录 Token 有效期",
+                    "type": "string"
+                },
+                "workerPoolMaxWorkers": {
+                    "description": "Worker pool max workers // 协程池最大协程数",
+                    "type": "integer"
+                },
+                "workerPoolQueueSize": {
+                    "description": "Worker pool queue size // 协程池队列大小",
+                    "type": "integer"
+                },
+                "writeQueueCapacity": {
+                    "description": "Write queue capacity // 写入队列容量",
+                    "type": "integer"
+                },
+                "writeQueueIdleTime": {
+                    "description": "Write queue idle cleanup time // 写入队列空闲清理时长",
+                    "type": "string"
+                },
+                "writeQueueTimeout": {
+                    "description": "Write queue timeout // 写入队列超时",
+                    "type": "string"
+                },
+                "wsCheckUtf8Enabled": {
+                    "description": "Whether ws check UTF-8 is enabled // WebSocket 是否开启 UTF-8 校验",
+                    "type": "boolean"
+                },
+                "wsCompressionEnabled": {
+                    "description": "Whether ws compression is enabled // WebSocket 是否开启压缩",
+                    "type": "boolean"
+                },
+                "wsCompressionLevel": {
+                    "description": "Ws compression level // WebSocket 压缩级别",
+                    "type": "integer"
+                },
+                "wsCompressionThreshold": {
+                    "description": "Ws compression threshold // WebSocket 压缩阈值",
+                    "type": "integer"
+                },
+                "wsParallelEnabled": {
+                    "description": "Whether ws parallel is enabled // WebSocket 并行处理是否开启",
+                    "type": "boolean"
+                },
+                "wsParallelGolimit": {
+                    "description": "Ws parallel goroutine limit // WebSocket 并行协程限制",
+                    "type": "integer"
+                },
+                "wsReadMaxPayloadSize": {
+                    "description": "WebSocket max read payload // WebSocket 最大读取负载",
+                    "type": "string"
+                },
+                "wsWriteMaxPayloadSize": {
+                    "description": "WebSocket max write payload // WebSocket 最大写入负载",
                     "type": "string"
                 }
             }
@@ -5824,23 +6194,6 @@ const docTemplate = `{
                 "usedPercent": {
                     "description": "Memory usage percentage // 内存使用率",
                     "type": "number"
-                }
-            }
-        },
-        "dto.AdminNgrokConfig": {
-            "type": "object",
-            "properties": {
-                "authToken": {
-                    "description": "ngrok auth token // ngrok 认证令牌",
-                    "type": "string"
-                },
-                "domain": {
-                    "description": "Custom domain // 自定义域名",
-                    "type": "string"
-                },
-                "enabled": {
-                    "description": "Whether to enable ngrok tunnel // 是否启用 ngrok 隧道",
-                    "type": "boolean"
                 }
             }
         },
@@ -6068,13 +6421,13 @@ const docTemplate = `{
         "dto.AdminWebGUIConfig": {
             "type": "object",
             "properties": {
-                "adminUid": {
-                    "description": "Admin UID // 管理员 UID",
-                    "type": "integer"
-                },
                 "fontSet": {
                     "description": "Font set // 字体设置",
                     "type": "string"
+                },
+                "ftsBleveEnabled": {
+                    "description": "Whether Bleve FTS is enabled // 是否启用 Bleve 全文搜索",
+                    "type": "boolean"
                 },
                 "registerIsEnable": {
                     "description": "Registration enablement // 是否开启注册",
@@ -6123,6 +6476,14 @@ const docTemplate = `{
                 },
                 "nextRunTime": {
                     "description": "Next run time // 下次运行时间",
+                    "type": "string"
+                },
+                "passwordMode": {
+                    "description": "Password mode (0:None, 1:Fixed, 2:Random) // 密码模式 (0:无密码, 1:固定密码, 2:随机密码)",
+                    "type": "integer"
+                },
+                "passwordValue": {
+                    "description": "Password value for fixed mode // 固定密码值",
                     "type": "string"
                 },
                 "retentionDays": {
@@ -6189,6 +6550,16 @@ const docTemplate = `{
                     "description": "Is enabled // 是否启用",
                     "type": "boolean",
                     "example": true
+                },
+                "passwordMode": {
+                    "description": "Password mode (0:None, 1:Fixed, 2:Random) // 密码模式 (0:无密码, 1:固定密码, 2:随机密码)",
+                    "type": "integer",
+                    "example": 0
+                },
+                "passwordValue": {
+                    "description": "Password value for fixed mode // 固定密码值",
+                    "type": "string",
+                    "example": "123456"
                 },
                 "retentionDays": {
                     "description": "Retention days // 保留天数",
@@ -6263,6 +6634,10 @@ const docTemplate = `{
                     "description": "Result message // 结果消息",
                     "type": "string"
                 },
+                "password": {
+                    "description": "Password // 密码",
+                    "type": "string"
+                },
                 "startTime": {
                     "description": "Start time // 开始时间",
                     "type": "string"
@@ -6302,6 +6677,10 @@ const docTemplate = `{
                 },
                 "ctime": {
                     "description": "Creation timestamp // 创建时间戳",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "File ID // 文件 ID",
                     "type": "integer"
                 },
                 "lastTime": {
@@ -6560,6 +6939,13 @@ const docTemplate = `{
                     "description": "Branch // 分支",
                     "type": "string"
                 },
+                "configSyncRules": {
+                    "description": "Config sync rules // 配置同步规则",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "createdAt": {
                     "description": "Created at // 创建时间",
                     "type": "string"
@@ -6571,6 +6957,10 @@ const docTemplate = `{
                 "id": {
                     "description": "Task ID // 任务ID",
                     "type": "integer"
+                },
+                "includeConfig": {
+                    "description": "Include config sync // 是否开启配置同步",
+                    "type": "boolean"
                 },
                 "isEnabled": {
                     "description": "Is enabled // 是否启用",
@@ -6627,12 +7017,21 @@ const docTemplate = `{
                 "branch": {
                     "type": "string"
                 },
+                "configSyncRules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "delay": {
                     "description": "Delay time (seconds) // 延迟时间（秒）",
                     "type": "integer"
                 },
                 "id": {
                     "type": "integer"
+                },
+                "includeConfig": {
+                    "type": "boolean"
                 },
                 "isEnabled": {
                     "type": "boolean"
@@ -6783,6 +7182,10 @@ const docTemplate = `{
                 },
                 "ctime": {
                     "description": "Creation timestamp // 创建时间戳",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "Note ID // 笔记 ID",
                     "type": "integer"
                 },
                 "lastTime": {
@@ -6991,6 +7394,10 @@ const docTemplate = `{
                 },
                 "ctime": {
                     "description": "Creation timestamp // 创建时间戳",
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "Note ID // 笔记 ID",
                     "type": "integer"
                 },
                 "lastTime": {
@@ -7505,6 +7912,10 @@ const docTemplate = `{
         "dto.ShareCreateResponse": {
             "type": "object",
             "properties": {
+                "baseUrl": {
+                    "description": "Base URL for sharing // 分享基础 URL",
+                    "type": "string"
+                },
                 "expiresAt": {
                     "description": "Expiration time // 过期时间",
                     "type": "string"
@@ -7534,6 +7945,10 @@ const docTemplate = `{
         "dto.ShareListItem": {
             "type": "object",
             "properties": {
+                "baseUrl": {
+                    "description": "Base URL for sharing // 分享基础 URL",
+                    "type": "string"
+                },
                 "createdAt": {
                     "description": "Created at // 创建时间",
                     "type": "string"
@@ -7937,9 +8352,17 @@ const docTemplate = `{
                     "description": "Email address // 邮件地址",
                     "type": "string"
                 },
+                "isDeleted": {
+                    "description": "User is blocked",
+                    "type": "boolean"
+                },
                 "token": {
                     "description": "Authentication Token // 认证 Token",
                     "type": "string"
+                },
+                "tokenId": {
+                    "description": "Authentication Token ID // 认证 Token ID",
+                    "type": "integer"
                 },
                 "uid": {
                     "description": "User ID (primary key) // 用户唯一标识（主键）",
@@ -7971,6 +8394,46 @@ const docTemplate = `{
                     "description": "Password // 密码",
                     "type": "string",
                     "example": "password123"
+                },
+                "tokenId": {
+                    "description": "Last token ID for rotation // 最后一个用于轮转的令牌ID",
+                    "type": "integer",
+                    "example": 123
+                }
+            }
+        },
+        "dto.UserUpdateRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "uid",
+                "username"
+            ],
+            "properties": {
+                "email": {
+                    "description": "User email // 用户邮件",
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "isDeleted": {
+                    "description": "User deleted flag",
+                    "type": "boolean",
+                    "example": true
+                },
+                "password": {
+                    "description": "User password // 用户密码",
+                    "type": "string",
+                    "example": "password123"
+                },
+                "uid": {
+                    "description": "User ID (primary key) // 用户唯一标识（主键）",
+                    "type": "integer",
+                    "example": 123
+                },
+                "username": {
+                    "description": "User name // 用户名",
+                    "type": "string",
+                    "example": "username123"
                 }
             }
         },
@@ -8015,6 +8478,30 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.VaultForceDeleteItemRequest": {
+            "type": "object",
+            "required": [
+                "id",
+                "type",
+                "vaultId"
+            ],
+            "properties": {
+                "id": {
+                    "description": "Resource ID // 资源 ID",
+                    "type": "integer",
+                    "example": 100
+                },
+                "type": {
+                    "description": "Resource type: note or file // 资源类型",
+                    "type": "string"
+                },
+                "vaultId": {
+                    "description": "Vault ID // 笔记库 ID",
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "dto.VaultPostRequest": {
             "type": "object",
             "required": [
@@ -8033,6 +8520,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.VaultRebuildIndexRequest": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "Vault ID // 保险库 ID",
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                }
+            }
+        },
         "dto.VersionDTO": {
             "type": "object",
             "properties": {
@@ -8043,6 +8544,13 @@ const docTemplate = `{
                 "gitTag": {
                     "description": "Git tag // Git 标签",
                     "type": "string"
+                },
+                "pluginVersionHistory": {
+                    "description": "Plugin version history // 插件历史版本",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/app.HistoricalVersion"
+                    }
                 },
                 "pluginVersionNewChangelog": {
                     "description": "New plugin version changelog link // 插件新版本更新日志链接",
@@ -8063,6 +8571,13 @@ const docTemplate = `{
                 "version": {
                     "description": "Current version // 当前版本",
                     "type": "string"
+                },
+                "versionHistory": {
+                    "description": "Service version history // 服务端历史版本",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/app.HistoricalVersion"
+                    }
                 },
                 "versionIsNew": {
                     "description": "Is there a new version // 是否有新版本",

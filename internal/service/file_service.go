@@ -607,6 +607,18 @@ func (s *fileService) GetContent(ctx context.Context, uid int64, params *dto.Fil
 	if s.fileRepo != nil {
 		file, err := s.fileRepo.GetByPathHash(ctx, pathHash, vaultID, uid)
 		if err == nil && file != nil {
+			// Check IsRecycle support
+			// 检查回收站标识支持
+			if params.IsRecycle {
+				if file.Action != domain.FileActionDelete {
+					return nil, "", 0, "", code.ErrorFileNotFound
+				}
+			} else {
+				if file.Action == domain.FileActionDelete {
+					return nil, "", 0, "", code.ErrorFileNotFound
+				}
+			}
+
 			// Identify file MIME type
 			// 识别文件 MIME 类型
 			ext := filepath.Ext(params.Path)
@@ -875,6 +887,14 @@ func (s *fileService) Rename(ctx context.Context, uid int64, params *dto.FileRen
 
 		// 修正目录FID
 		go s.folderService.SyncResourceFID(context.Background(), uid, vaultID, nil, []int64{newFileCreated.ID})
+		if err := s.folderService.CleanupEmptyAncestors(ctx, uid, vaultID, oldPath); err != nil {
+			zap.L().Warn("fileService.Rename: cleanup empty ancestor folders failed",
+				zap.Int64("uid", uid),
+				zap.Int64("vaultID", vaultID),
+				zap.String("oldPath", oldPath),
+				zap.Error(err),
+			)
+		}
 
 		if s.backupService != nil {
 			go s.backupService.NotifyUpdated(uid)

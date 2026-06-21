@@ -126,6 +126,7 @@ var en_messages = map[int]string{
 	511: "Git sync task is already running",
 	512: "Git validation failed",
 	520: "Cloudflared download failed",
+	521: "Cloudflared binary not found, please download the tunnel program first",
 
 	// --- Friend Relationship (530-539) ---
 	530: "Friend not found",

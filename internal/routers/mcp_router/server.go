@@ -6,6 +6,7 @@ import (
 
 	"github.com/haierkeys/fast-note-sync-service/internal/app"
 	pkgapp "github.com/haierkeys/fast-note-sync-service/pkg/app"
+	"github.com/haierkeys/fast-note-sync-service/pkg/util"
 	"github.com/mark3labs/mcp-go/mcp"
 	mcpsrv "github.com/mark3labs/mcp-go/server"
 )
@@ -71,6 +72,21 @@ func checkPermission(ctx context.Context, function string) error {
 	return nil
 }
 
+// checkVaultAccess verifies whether the target vault is permitted by the token's vault allowlist.
+// If the token has no vault restriction (vaults == ""), all vaults are allowed.
+// checkVaultAccess 验证目标笔记库是否在 token 的允许列表中。
+// 如果 token 没有配置 vault 限制（vaults 为空），则允许访问所有库。
+func checkVaultAccess(ctx context.Context, vault string) error {
+	allowedVaults, _ := ctx.Value("vaults").(string)
+	if allowedVaults == "" {
+		return nil
+	}
+	if !util.VerifyVaultAccess(allowedVaults, vault) {
+		return fmt.Errorf("vault access restricted: %s", vault)
+	}
+	return nil
+}
+
 func NewMCPServer(appContainer *app.App, wss *pkgapp.WebsocketServer) *mcpsrv.MCPServer {
 	// Create MCP server
 	srv := mcpsrv.NewMCPServer(
@@ -83,6 +99,9 @@ func NewMCPServer(appContainer *app.App, wss *pkgapp.WebsocketServer) *mcpsrv.MC
 
 	// File Tools
 	registerFileTools(srv, appContainer, wss)
+
+	// Folder Tools
+	registerFolderTools(srv, appContainer, wss)
 
 	// Vault Tools
 	registerVaultTools(srv, appContainer)

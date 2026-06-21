@@ -13,11 +13,21 @@ type UserCreateRequest struct {
 	ConfirmPassword string `json:"confirmPassword" form:"confirmPassword" binding:"required" example:"password123"` // Confirm password // 校验密码
 }
 
+// UserUpdateRequest User update request parameters
+type UserUpdateRequest struct {
+	UID       int64  `json:"uid" form:"uid" binding:"required,gt=0" example:"123"`                   // User ID (primary key) // 用户唯一标识（主键）
+	Email     string `json:"email" form:"email" binding:"required,email" example:"user@example.com"` // User email // 用户邮件
+	Username  string `json:"username" form:"username" binding:"required" example:"username123"`      // User name // 用户名
+	Password  string `json:"password" form:"password" example:"password123"`                         // User password // 用户密码
+	IsDeleted bool   `json:"isDeleted" form:"isDeleted" example:"true"`                              // User deleted flag
+}
+
 // UserLoginRequest User login request parameters
 // 用户登录请求参数
 type UserLoginRequest struct {
 	Credentials string `json:"credentials" form:"credentials" binding:"required" example:"user@example.com"` // Username or Email // 登录凭证（用户名或邮件）
 	Password    string `json:"password" form:"password" binding:"required" example:"password123"`            // Password // 密码
+	TokenID     int64  `json:"tokenId" form:"tokenId" example:"123"`                                         // Last token ID for rotation // 最后一个用于轮转的令牌ID
 }
 
 // UserRegisterSendEmailRequest Request parameters for sending registration email
@@ -43,7 +53,9 @@ type UserDTO struct {
 	Email     string     `json:"email"`     // Email address // 邮件地址
 	Username  string     `json:"username"`  // Username // 用户名
 	Token     string     `json:"token"`     // Authentication Token // 认证 Token
+	TokenID   int64      `json:"tokenId"`   // Authentication Token ID // 认证 Token ID
 	Avatar    string     `json:"avatar"`    // Avatar URL or handle // 头像路径或名称
+	IsDeleted bool       `json:"isDeleted"` // User is blocked
 	UpdatedAt timex.Time `json:"updatedAt"` // Last updated time // 最后更新时间
 	CreatedAt timex.Time `json:"createdAt"` // Account created time // 账号创建时间
 }

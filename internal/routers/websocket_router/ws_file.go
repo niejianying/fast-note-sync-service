@@ -104,6 +104,10 @@ func (s *FileUploadBinaryChunkSession) GetPathHash() string {
 	return s.PathHash
 }
 
+func (s *FileUploadBinaryChunkSession) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
 // FileDownloadChunkSession defines the session state for file chunk download
 // Used to track progress and file info for large file chunk downloads
 // FileDownloadChunkSession 定义文件分块下载的会话状态。
@@ -562,7 +566,7 @@ func (h *FileWSHandler) FileChunkDownload(c *pkgapp.WebsocketClient, msg *pkgapp
 	// Check if file exists on disk
 	// 检查文件是否存在于磁盘
 	if _, err := os.Stat(fileSvc.SavePath); os.IsNotExist(err) {
-		h.respondError(c, code.ErrorFileGetFailed, fmt.Errorf("file not found on disk: %s (pathHash: %s)", fileSvc.SavePath, fileSvc.PathHash), "websocket_router.file.FileChunkDownload.Stat")
+		h.respondError(c, code.ErrorFileGetFailed, fmt.Errorf("file not found on disk: %s (path: %s, pathHash: %s)", fileSvc.SavePath, fileSvc.Path, fileSvc.PathHash), "websocket_router.file.FileChunkDownload.Stat")
 		return
 	}
 

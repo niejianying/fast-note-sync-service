@@ -2,11 +2,13 @@ package routers
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/haierkeys/fast-note-sync-service/internal/app"
+	appconfig "github.com/haierkeys/fast-note-sync-service/internal/config"
 	"github.com/haierkeys/fast-note-sync-service/internal/middleware"
 	"github.com/haierkeys/fast-note-sync-service/internal/routers/api_router"
 	pkgapp "github.com/haierkeys/fast-note-sync-service/pkg/app"
@@ -51,15 +53,23 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 		vaultShareHandler := api_router.NewVaultShareHandler(appContainer)
 		inboxItemHandler := api_router.NewInboxItemHandler(appContainer)
 		vaultMemberHandler := api_router.NewVaultMemberHandler(appContainer)
+		stytchOAuthHandler := api_router.NewStytchOAuthHandler(appContainer)
+		oidcHandler := api_router.NewOIDCHandler(appContainer)
 
 		// No-auth WebGUI restricted routes
 		// 免认证但仅限 WebGUI 访问的路由组
 		noAuthWebgui := api.Group("")
-		noAuthWebgui.Use(pkgapp.RequireWebGUI())
+		noAuthWebgui.Use(middleware.RequireWebGUI())
 		{
 			noAuthWebgui.POST("/user/register", userHandler.Register)
 			noAuthWebgui.POST("/user/login", userHandler.Login)
+			noAuthWebgui.GET("/user/auth/oidc/config", oidcHandler.Config)
 			noAuthWebgui.GET("/webgui/config", adminControlHandler.Config)
+		}
+		api.GET("/user/auth/oidc/start", oidcHandler.Start)
+		api.GET("/user/auth/oidc/start/:providerID", oidcHandler.Start)
+		for _, route := range oidcCallbackRoutes(cfg.OIDC) {
+			api.GET(route, oidcHandler.Callback)
 		}
 		api.GET("/user/sync", wss.Run())
 
@@ -102,10 +112,13 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 			// Admin config interface
 			// 管理员配置接口
 			auth.GET("/admin/upgrade", adminControlHandler.Upgrade)
+			auth.GET("/admin/check", adminControlHandler.CheckAdmin)
 			auth.GET("/admin/ws_clients", adminControlHandler.GetWSClients)
 			auth.DELETE("/admin/ws_client/:traceId", adminControlHandler.KickWSClient)
 
 			auth.GET("/user/info", userHandler.UserInfo)
+			auth.POST("/oauth/stytch/authorize/start", stytchOAuthHandler.AuthorizeStart)
+			auth.POST("/oauth/stytch/authorize/submit", stytchOAuthHandler.AuthorizeSubmit)
 
 			auth.GET("/note", noteHandler.Get)
 			auth.POST("/note", noteHandler.CreateOrUpdate)
@@ -159,7 +172,7 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 			// WebGUI restricted routes
 			// 仅限 WebGUI 访问的路由组
 			webguiGroup := auth.Group("")
-			webguiGroup.Use(pkgapp.RequireWebGUI())
+			webguiGroup.Use(middleware.RequireWebGUI())
 			{
 				// User management routes
 				// 用户管理接口
@@ -171,23 +184,26 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 				webguiGroup.POST("/vault", vaultHandler.CreateOrUpdate)
 				webguiGroup.DELETE("/vault", vaultHandler.Delete)
 				webguiGroup.POST("/vault/rebuild-index", vaultHandler.RebuildIndex)
+				webguiGroup.POST("/vault/force-delete-item", vaultHandler.ForceDeleteDataItem)
 
 				// Admin config interface
 				// 管理员配置接口
-				webguiGroup.GET("/admin/check", adminControlHandler.CheckAdmin)
 				webguiGroup.GET("/admin/config", adminControlHandler.GetConfig)
 				webguiGroup.POST("/admin/config", adminControlHandler.UpdateConfig)
 				webguiGroup.GET("/admin/config/user_database", adminControlHandler.GetUserDatabaseConfig)
 				webguiGroup.POST("/admin/config/user_database", adminControlHandler.UpdateUserDatabaseConfig)
 				webguiGroup.POST("/admin/config/user_database/test", adminControlHandler.ValidateUserDatabaseConfig)
-				webguiGroup.GET("/admin/config/ngrok", adminControlHandler.GetNgrokConfig)
-				webguiGroup.POST("/admin/config/ngrok", adminControlHandler.UpdateNgrokConfig)
 				webguiGroup.GET("/admin/config/cloudflare", adminControlHandler.GetCloudflareConfig)
 				webguiGroup.POST("/admin/config/cloudflare", adminControlHandler.UpdateCloudflareConfig)
 				webguiGroup.GET("/admin/systeminfo", adminControlHandler.GetSystemInfo)
 				webguiGroup.GET("/admin/restart", adminControlHandler.Restart)
 				webguiGroup.GET("/admin/gc", adminControlHandler.GC)
 				webguiGroup.GET("/admin/cloudflared_tunnel_download", adminControlHandler.CloudflaredTunnelDownload)
+
+				// Admin user managment
+				webguiGroup.GET("/admin/users/list", adminControlHandler.GetUsers)
+				webguiGroup.POST("/admin/users/create", adminControlHandler.CreateUser)
+				webguiGroup.POST("/admin/users/update", adminControlHandler.UpdateUser)
 
 				// Storage management routes
 				// 存储配置接口
@@ -259,4 +275,48 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 			auth.DELETE("/vault/:name/members/:uid", vaultMemberHandler.RemoveMember)
 		}
 	}
+}
+
+func oidcCallbackRoute(callbackPath string) string {
+	callbackPath = strings.TrimSpace(callbackPath)
+	if callbackPath == "" {
+		return "/user/auth/oidc/callback"
+	}
+	if strings.HasPrefix(callbackPath, "/api/") {
+		return strings.TrimPrefix(callbackPath, "/api")
+	}
+	if strings.HasPrefix(callbackPath, "/") {
+		return callbackPath
+	}
+	return "/" + callbackPath
+}
+
+func oidcCallbackRoutes(cfg appconfig.OIDCConfig) []string {
+	routes := []string{}
+	seen := map[string]struct{}{}
+	add := func(route string) {
+		if _, ok := seen[route]; ok {
+			return
+		}
+		seen[route] = struct{}{}
+		routes = append(routes, route)
+	}
+
+	add(oidcCallbackRoute(cfg.CallbackPath))
+	for _, provider := range cfg.Providers {
+		route := oidcCallbackRoute(provider.CallbackPath)
+		if route == oidcDefaultProviderCallbackRoute(provider.ID) || strings.Contains(route, ":") {
+			continue
+		}
+		add(route)
+	}
+	add("/user/auth/oidc/callback/:providerID")
+	return routes
+}
+
+func oidcDefaultProviderCallbackRoute(providerID string) string {
+	if providerID == "" || providerID == "default" {
+		return "/user/auth/oidc/callback"
+	}
+	return "/user/auth/oidc/callback/" + providerID
 }
