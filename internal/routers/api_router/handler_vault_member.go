@@ -64,7 +64,7 @@ func (h *VaultMemberHandler) ListMembers(c *gin.Context) {
 
 	var result []*dto.VaultMemberDTO
 	for _, m := range members {
-		user, err := h.App.UserRepo.GetByUID(ctx, m.MemberUID)
+		user, err := h.App.UserRepo.GetByUID(ctx, m.MemberUID, true)
 		if err != nil {
 			h.logError(ctx, "VaultMemberHandler.ListMembers.GetByUID", err)
 			apperrors.ErrorResponse(c, err)

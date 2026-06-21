@@ -55,3 +55,5 @@ func (s *sharedFolderService) EnsurePathFID(ctx context.Context, uid int64, vaul
 func (s *sharedFolderService) SyncResourceFID(ctx context.Context, uid int64, vaultID int64, noteIDs []int64, fileIDs []int64) error { return nil }
 func (s *sharedFolderService) GetTree(ctx context.Context, uid int64, params *dto.FolderTreeRequest) (*dto.FolderTreeResponse, error) { return nil, nil }
 func (s *sharedFolderService) CleanDuplicateFolders(ctx context.Context, uid int64, vaultID int64) error { return nil }
+func (s *sharedFolderService) CleanupEmptyAncestors(ctx context.Context, uid int64, vaultID int64, resourcePath string) error { return nil }
+func (s *sharedFolderService) DeleteTree(ctx context.Context, uid int64, params *dto.FolderDeleteRequest) (*dto.FolderDTO, error) { return nil, nil }

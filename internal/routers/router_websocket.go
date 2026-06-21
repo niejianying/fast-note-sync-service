@@ -142,7 +142,7 @@ func broadcastMemberStatus(ctx context.Context, appContainer *app.App, uid int64
 
 	// Get user display name
 	username := fmt.Sprintf("%d", uid)
-	if user, err := appContainer.UserRepo.GetByUID(ctx, uid); err == nil && user != nil {
+	if user, err := appContainer.UserRepo.GetByUID(ctx, uid, true); err == nil && user != nil {
 		if user.Username != "" {
 			username = user.Username
 		} else if user.Email != "" {
@@ -216,7 +216,7 @@ func broadcastFriendStatus(ctx context.Context, appContainer *app.App, uid int64
 	}
 
 	username := fmt.Sprintf("%d", uid)
-	if user, err := appContainer.UserRepo.GetByUID(ctx, uid); err == nil && user != nil {
+	if user, err := appContainer.UserRepo.GetByUID(ctx, uid, true); err == nil && user != nil {
 		if user.Username != "" {
 			username = user.Username
 		} else if user.Email != "" {
@@ -289,7 +289,7 @@ func sendOnlineMembersToUser(ctx context.Context, appContainer *app.App, newUID 
 			}
 
 			username := fmt.Sprintf("%d", vm.MemberUID)
-			if user, err := appContainer.UserRepo.GetByUID(ctx, vm.MemberUID); err == nil && user != nil {
+			if user, err := appContainer.UserRepo.GetByUID(ctx, vm.MemberUID, true); err == nil && user != nil {
 				if user.Username != "" {
 					username = user.Username
 				} else if user.Email != "" {
@@ -330,7 +330,7 @@ func sendOnlineFriendsToUser(ctx context.Context, appContainer *app.App, newUID 
 		}
 
 		username := fmt.Sprintf("%d", friendUID)
-		if user, err := appContainer.UserRepo.GetByUID(ctx, friendUID); err == nil && user != nil {
+		if user, err := appContainer.UserRepo.GetByUID(ctx, friendUID, true); err == nil && user != nil {
 			if user.Username != "" {
 				username = user.Username
 			} else if user.Email != "" {
