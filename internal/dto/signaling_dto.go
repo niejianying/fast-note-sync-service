@@ -7,3 +7,10 @@ type SignalingMessage struct {
 	ICE       string `json:"ice,omitempty"`
 	Type      string `json:"type,omitempty"` // "offer" | "answer" | "ice"
 }
+
+type RelayMessage struct {
+	SessionID int64  `json:"sessionId" validate:"required"`
+	Payload   string `json:"payload,omitempty"`
+	Binary    []byte `json:"binary,omitempty"`
+	ReqID     int64  `json:"reqId"`
+}

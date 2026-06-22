@@ -20,6 +20,7 @@ type SessionService interface {
 	Close(ctx context.Context, uid int64, sessionID int64) error
 	Get(ctx context.Context, uid int64, sessionID int64) (*dto.SessionDTO, error)
 	List(ctx context.Context, uid int64) ([]*dto.SessionDTO, error)
+	ListMembers(ctx context.Context, sessionID int64) ([]*dto.SessionMemberDTO, error)
 	SetOnline(ctx context.Context, sessionID, uid int64, online bool) error
 	SetAllOffline(ctx context.Context, sessionID int64) error
 }
@@ -246,6 +247,18 @@ func (s *sessionService) List(ctx context.Context, uid int64) ([]*dto.SessionDTO
 
 func (s *sessionService) SetOnline(ctx context.Context, sessionID, uid int64, online bool) error {
 	return s.sessionRepo.UpdateMemberOnline(ctx, sessionID, uid, online)
+}
+
+func (s *sessionService) ListMembers(ctx context.Context, sessionID int64) ([]*dto.SessionMemberDTO, error) {
+	members, err := s.sessionRepo.ListMembers(ctx, sessionID)
+	if err != nil {
+		return nil, code.ErrorDBQuery.WithDetails(err.Error())
+	}
+	var result []*dto.SessionMemberDTO
+	for _, m := range members {
+		result = append(result, s.memberToDTO(m))
+	}
+	return result, nil
 }
 
 func (s *sessionService) SetAllOffline(ctx context.Context, sessionID int64) error {

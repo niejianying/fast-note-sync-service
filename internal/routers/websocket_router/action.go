@@ -263,6 +263,10 @@ const (
 	// SessionReceiveWebRTCICECandidate received ICE candidate from session peer
 	// SessionReceiveWebRTCICECandidate 收到 ICE Candidate
 	SessionReceiveWebRTCICECandidate WebSocketReceiveAction = "SessionWebRTCICECandidate"
+
+	// SessionRelayData forward arbitrary data to all session members
+	// SessionRelayData 向所有会话成员转发数据
+	SessionRelayData WebSocketReceiveAction = "SessionRelayData"
 )
 
 // WSQueuedMessage represents a message item to be sent
