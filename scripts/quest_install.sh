@@ -414,8 +414,10 @@ get_latest_tag() {
 # 构建预期的资产文件名：fast-note-sync-service-<ver>-<os>-<arch>.tar.gz
 asset_name_for() {
     local ver="$1" os="$2" arch="$3"
-    # strip leading v if present in tag
     local clean_ver="${ver#v}"
+    # Strip pre-release suffixes (-alpha, -beta, -rc*) for asset filename matching
+    # 去掉预发布后缀以便匹配正确的资源文件名
+    clean_ver="${clean_ver%%-*}"
     echo "${BIN_BASE}-${clean_ver}-${os}-${arch}.tar.gz"
 }
 
