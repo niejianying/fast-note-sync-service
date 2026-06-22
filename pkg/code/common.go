@@ -138,4 +138,11 @@ var (
 	ErrorFriendAlreadyExists   = NewError(531)
 	ErrorFriendRequestNotFound = NewError(532)
 	ErrorFriendCannotAddSelf   = NewError(533)
+
+	// --- Collaboration Session (540-549) ---
+	ErrorSessionNotFound      = NewError(540)
+	ErrorSessionClosed        = NewError(541)
+	ErrorSessionNotHost       = NewError(542)
+	ErrorSessionNotMember     = NewError(543)
+	ErrorSessionCannotJoinOwn = NewError(544)
 )

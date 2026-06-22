@@ -52,6 +52,7 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 		friendHandler := api_router.NewFriendRelationshipHandler(appContainer)
 		vaultShareHandler := api_router.NewVaultShareHandler(appContainer)
 		inboxItemHandler := api_router.NewInboxItemHandler(appContainer)
+		sessionHandler := api_router.NewSessionHandler(appContainer)
 		vaultMemberHandler := api_router.NewVaultMemberHandler(appContainer)
 		stytchOAuthHandler := api_router.NewStytchOAuthHandler(appContainer)
 		oidcHandler := api_router.NewOIDCHandler(appContainer)
@@ -268,6 +269,15 @@ func registerAPIRoutes(r *gin.Engine, appContainer *app.App, wss *pkgapp.Websock
 			auth.POST("/inbox/item/:id/read", inboxItemHandler.MarkRead)
 			auth.POST("/inbox/items/read-all", inboxItemHandler.MarkAllRead)
 			auth.DELETE("/inbox/item/:id", inboxItemHandler.DeleteItem)
+
+			// Session routes
+			// 协作会话路由
+			auth.POST("/session", sessionHandler.Create)
+			auth.POST("/session/join", sessionHandler.Join)
+			auth.POST("/session/:id/leave", sessionHandler.Leave)
+			auth.POST("/session/:id/close", sessionHandler.Close)
+			auth.GET("/session/:id", sessionHandler.Get)
+			auth.GET("/sessions", sessionHandler.List)
 
 			// Vault member routes
 			// 仓库成员管理路由

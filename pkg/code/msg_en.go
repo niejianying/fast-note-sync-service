@@ -133,4 +133,11 @@ var en_messages = map[int]string{
 	531: "Friend already exists",
 	532: "Friend request not found",
 	533: "Cannot add yourself as friend",
+
+	// --- Collaboration Session (540-549) ---
+	540: "Collaboration session not found",
+	541: "Collaboration session is closed",
+	542: "You are not the session host",
+	543: "You are not a member of this session",
+	544: "Cannot join your own session",
 }

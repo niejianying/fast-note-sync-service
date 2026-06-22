@@ -81,6 +81,12 @@ func AutoMigrate(db *gorm.DB, key string) error {
 
 	case "InboxItem":
 		return db.AutoMigrate(InboxItem{})
+
+	case "CollabSession":
+		return db.AutoMigrate(CollabSession{})
+
+	case "SessionMember":
+		return db.AutoMigrate(SessionMember{})
 	}
 	return nil
 }

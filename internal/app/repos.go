@@ -31,6 +31,7 @@ type Repositories struct {
 	SharedFileRepo domain.SharedFileRepository
 	InboxItemRepo domain.InboxItemRepository
 	OIDCIdentityRepo domain.OIDCIdentityRepository
+	SessionRepo domain.SessionRepository
 }
 
 // initRepositories initializes all repositories
@@ -60,5 +61,6 @@ func initRepositories(d *dao.Dao) *Repositories {
 		SharedFileRepo:         dao.NewSharedFileRepository(d),
 		InboxItemRepo:          dao.NewInboxItemRepository(d),
 		OIDCIdentityRepo: dao.NewOIDCIdentityRepository(d),
+		SessionRepo:      dao.NewSessionRepository(d),
 	}
 }

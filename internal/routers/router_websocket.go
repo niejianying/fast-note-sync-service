@@ -24,6 +24,7 @@ func initWebSocketRoutes(wss *pkgapp.WebsocketServer, appContainer *app.App) {
 	folderWSHandler := websocket_router.NewFolderWSHandler(appContainer)
 	fileWSHandler := websocket_router.NewFileWSHandler(appContainer)
 	settingWSHandler := websocket_router.NewSettingWSHandler(appContainer)
+	sessionWSHandler := websocket_router.NewSessionWSHandler(appContainer)
 
 	// Note
 	wss.Use(websocket_router.NoteReceiveModify, noteWSHandler.NoteModify)
@@ -57,6 +58,11 @@ func initWebSocketRoutes(wss *pkgapp.WebsocketServer, appContainer *app.App) {
 
 	// Attachment chunk upload
 	wss.UseBinary(websocket_router.VaultFileMsgType, fileWSHandler.FileUploadChunkBinary)
+
+	// Collaboration Session Signaling
+	wss.Use(websocket_router.SessionReceiveWebRTCOffer, sessionWSHandler.HandleSignaling)
+	wss.Use(websocket_router.SessionReceiveWebRTCAnswer, sessionWSHandler.HandleSignaling)
+	wss.Use(websocket_router.SessionReceiveWebRTCICECandidate, sessionWSHandler.HandleSignaling)
 
 	// Inject Message Interceptor to handle unauthenticated checks, Vault restrictions, RBAC checks, and error rollbacks
 	// 注入消息拦截器，处理未登录验证、Vault笔记库限制校验、RBAC权限检查以及写失败回滚机制

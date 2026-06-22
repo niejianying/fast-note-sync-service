@@ -251,6 +251,18 @@ const (
 	// MemberOffline notify vault members that a member went offline
 	// MemberOffline 通知仓库成员有成员下线
 	MemberOffline WebSocketSendAction = "MemberOffline"
+
+	// ---------------- Collaboration Session Signaling ----------------
+
+	// SessionReceiveWebRTCOffer received WebRTC offer from session peer
+	// SessionReceiveWebRTCOffer 收到 WebRTC Offer
+	SessionReceiveWebRTCOffer WebSocketReceiveAction = "SessionWebRTCOffer"
+	// SessionReceiveWebRTCAnswer received WebRTC answer from session peer
+	// SessionReceiveWebRTCAnswer 收到 WebRTC Answer
+	SessionReceiveWebRTCAnswer WebSocketReceiveAction = "SessionWebRTCAnswer"
+	// SessionReceiveWebRTCICECandidate received ICE candidate from session peer
+	// SessionReceiveWebRTCICECandidate 收到 ICE Candidate
+	SessionReceiveWebRTCICECandidate WebSocketReceiveAction = "SessionWebRTCICECandidate"
 )
 
 // WSQueuedMessage represents a message item to be sent
