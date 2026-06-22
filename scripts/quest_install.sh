@@ -392,10 +392,10 @@ _arch_map() {
 get_latest_tag() {
     if [ "$USE_CNB" = "true" ]; then
         local latest
-        # CNB releases API returns a list; we only need the first object's tag_name
-        # CNB releases API 返回一个列表；我们只需要第一个对象的 tag_name
-        latest=$(curl -fsSL -H "Accept: application/vnd.cnb.api+json" -H "Authorization: Bearer $CNB_TOKEN" "$CNB_API_BASE" | \
-        grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | head -n1 | sed -E 's/.*"([^"]+)"$/\1/' || true)
+        # CNB releases API returns a list; use version sort to get the highest tag
+        # CNB releases API 返回一个列表；用版本号排序获取最高 tag
+        latest=$(curl -fsSL -H "Accept: application/vnd.cnb.api+json" -H "Authorization: Bearer $CNB_TOKEN" "$CNB_API_BASE" 2>/dev/null | \
+        grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/' | sort -V | tail -n1 || true)
         if [ -n "$latest" ]; then echo "$latest"; return 0; fi
     fi
     
