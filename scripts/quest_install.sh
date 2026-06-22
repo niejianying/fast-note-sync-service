@@ -392,10 +392,10 @@ _arch_map() {
 get_latest_tag() {
     if [ "$USE_CNB" = "true" ]; then
         local latest
-        # CNB releases API returns a list; use version sort to get the highest tag
-        # CNB releases API 返回一个列表；用版本号排序获取最高 tag
+        # CNB releases API returns a list; use numeric sort for POSIX compatibility
+        # CNB releases API 返回一个列表；使用兼容性更好的数字排序
         latest=$(curl -fsSL -H "Accept: application/vnd.cnb.api+json" -H "Authorization: Bearer $CNB_TOKEN" "$CNB_API_BASE" 2>/dev/null | \
-        grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/' | sort -V | tail -n1 || true)
+        grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/' | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1 || true)
         if [ -n "$latest" ]; then echo "$latest"; return 0; fi
     fi
     
